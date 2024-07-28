@@ -1,3 +1,5 @@
+import time
+
 import pika
 import json
 import configparser
@@ -39,6 +41,15 @@ class MQClient:
         self.channel.queue_declare(queue='request_queue', durable=True)
         self.channel.queue_declare(queue='response_queue', durable=True)
 
+    def close(self):
+        if self.connection.is_open:
+            self.connection.close()
+
+
+class BlockingMQClient(MQClient):
+    def __init__(self, parameters):
+        super().__init__(parameters)
+
     def process(self, data):
         return f"The resp to '{data}' is 'resp' : 'ack' ".encode('utf-8')
 
@@ -67,14 +78,38 @@ class MQClient:
         finally:
             self.connection.close()
 
-    def close(self):
-        if self.connection.is_open:
-            self.connection.close()
+
+class NoneBlockingMQClient(BlockingMQClient):
+    def __init__(self, parameters):
+        super.__init__(parameters)
+
+    def fetch_one_msg(self, queue_name):
+        method_frame, header_frame, body = self.channel.basic_get(queue=queue_name)
+        if method_frame:
+            data_rev = body.decode('utf-8')
+            logger.info(f"Queue has messages. {data_rev}")
+            return data_rev
+        else:
+            logger.info("Queue is empty.")
+            return None
+
+    def send_one_msg(self, queue_name, message):
+        self.channel.basic_publish(
+            exchange='',
+            routing_key=queue_name,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # 设置消息持久化
+            )
+        )
+        logger.info(f"send msg {message}")
+        return True
+
 
 # Main function to control execution
-def main():
+def blocking_test():
     parameters = load_mq_config_parameters()
-    client = MQClient(parameters)
+    client = BlockingMQClient(parameters)
     try:
         client.listen_for_requests()
     except Exception as e:
@@ -82,5 +117,23 @@ def main():
     finally:
         client.close()
 
+
+def non_blocking_test():
+    '''
+    non blocking mode
+    '''
+    parameters = load_mq_config_parameters()
+    client = NoneBlockingMQClient(parameters)
+    try:
+        while True:
+            if client.fetch_one_msg('request_queue'):
+                client.send_one_msg("response_queue", "done")
+            time.sleep(1)
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+    finally:
+        client.close()
+
+
 if __name__ == '__main__':
-    main()
+    non_blocking_test()
