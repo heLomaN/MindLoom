@@ -49,9 +49,10 @@ class MQClient:
 class BlockingMQClient(MQClient):
     def __init__(self, parameters):
         super().__init__(parameters)
+        self.process = None
 
-    def process(self, data):
-        return f"The resp to '{data}' is 'resp' : 'ack' ".encode('utf-8')
+    def set_process(self, process):
+        self.process = process
 
     def process_request(self, ch, method, props, body):
         data_rev = body.decode('utf-8')
@@ -110,12 +111,18 @@ class NoneBlockingMQClient(BlockingMQClient):
 def blocking_test():
     parameters = load_mq_config_parameters()
     client = BlockingMQClient(parameters)
+
+    def append(data):
+        return f"The resp to '{data}' is 'resp' : 'ack' ".encode('utf-8')
+
     try:
+        client.set_process(append)
         client.listen_for_requests()
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"Error occurred: {e}")
     finally:
         client.close()
+        logger.info("Connection closed")
 
 
 def non_blocking_test():
@@ -130,10 +137,12 @@ def non_blocking_test():
                 client.send_one_msg("response_queue", "done")
             time.sleep(1)
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"Error occurred: {e}")
     finally:
         client.close()
+        logger.info("Connection closed")
 
 
 if __name__ == '__main__':
-    non_blocking_test()
+    # non_blocking_test()
+    blocking_test()
