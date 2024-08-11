@@ -3,6 +3,7 @@
 import unittest
 import sys
 import os
+from bson import ObjectId
 
 # 添加源代码目录到 Python 解释器路径中
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
@@ -10,7 +11,7 @@ from engine.scheduler.task.task import Task
 
 class TestTask(unittest.TestCase):
     def test_run_case1(self):
-        t_id = 'task_0001'
+        t_id = ObjectId('668e7e271a552b16d364f559')
         inputs = {
             'name' : '小C',
             'description' : '小C是曦之翼的智能AI客服，擅长处理各种AI问题，说话幽默',
