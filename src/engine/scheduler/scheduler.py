@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 
 # 导入配置文件从而确定根路径
-from ...config import root_path
 from src.engine.base.base import Base
 from src.engine.executor.action.action import Action
 from src.engine.executor.generator.generator import Generator

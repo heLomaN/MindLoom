@@ -5,14 +5,12 @@ from abc import ABC, abstractmethod
 from bson import ObjectId
 import json
 
-# 导入配置文件从而确定根路径
-from ...config import root_path
 # 从配置文件获取提示模板读入的方式
 from config import TEMPLATE_LOAD_METHOD
 if TEMPLATE_LOAD_METHOD == 'mongodb':
     from services.mongodb.mongodb import mongo_db
 elif TEMPLATE_LOAD_METHOD == 'file':
-    from ...config import TEMPLATE_FILE_PATH
+    from config import TEMPLATE_FILE_PATH
 
 # 定义基础类
 class Base:
@@ -100,6 +98,7 @@ class Base:
         # 类名转换成索引类名
         index_name = self.CLASS_NAME_MAPPING[class_name]
         
+        print(TEMPLATE_LOAD_METHOD)
         # 从本地文件夹读取模板
         if TEMPLATE_LOAD_METHOD == 'file':
             return self.load_template_by_file(index_name, self.id)

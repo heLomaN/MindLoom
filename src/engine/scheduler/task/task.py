@@ -1,7 +1,6 @@
 # src/engine/scheduler/task/task.py
 
 # 导入配置文件从而确定根路径
-from ....config import root_path
 from src.engine.scheduler.scheduler import Scheduler
 from src.engine.scheduler.process.process import Process
 
