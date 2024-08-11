@@ -6,10 +6,8 @@ import json
 
 # 获取当前项目根目录
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# 添加源代码目录到 Python 解释器路径中
-sys.path.insert(0, os.path.dirname(__file__))
 # 获取默认配置文件路径
-config_path = os.path.join(root_path,'config/default_config.json')
+config_path = os.path.join(root_path,'config/config.json')
 # 从文件中加载 JSON 数据
 class Config:
     def __init__(self, config_path=config_path):

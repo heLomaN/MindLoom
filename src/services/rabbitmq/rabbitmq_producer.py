@@ -3,7 +3,8 @@ import time
 import pika
 import json
 import configparser
-from src.services.logger.base_logger import BaseLogger
+
+from services.logger.base_logger import BaseLogger
 
 logger = BaseLogger("rabbitmq")
 

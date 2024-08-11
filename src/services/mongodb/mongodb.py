@@ -5,8 +5,8 @@ from pymongo.errors import ConnectionFailure
 import time
 import os
 
-from ...config import MONGO_CONFIG
-from ..logger.base_logger import BaseLogger
+from config import MONGO_CONFIG
+from services.logger.base_logger import BaseLogger
 
 class MongoDB:
     def __init__(self):

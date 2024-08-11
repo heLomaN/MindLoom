@@ -1,7 +1,7 @@
 # src/engine/executor/generator/generator.py
 
-from ....config import root_path
-from src.engine.executor.executor import Executor
+from config import root_path
+from engine.executor.executor import Executor
 
 class Generator(Executor):
     def __init__(self, id, secret):

@@ -1,9 +1,9 @@
 # src/engine/scheduler/process/process.py
 
 # 导入配置文件从而确定根路径
-from ....config import root_path
+from config import root_path
 # 导入基础类
-from src.engine.scheduler.scheduler import Scheduler
+from engine.scheduler.scheduler import Scheduler
 
 class Process(Scheduler):
     def __init__(self, id, secret):

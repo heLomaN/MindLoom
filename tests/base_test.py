@@ -5,8 +5,8 @@ import sys
 import os
 
 # 添加源代码目录到 Python 解释器路径中
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from src.engine.base.base import Base
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+from engine.base.base import Base
 
 class TestBase(unittest.TestCase):
     def test_run_case1(self):

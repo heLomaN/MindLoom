@@ -3,10 +3,10 @@
 from abc import ABC, abstractmethod
 
 # 导入配置文件从而确定根路径
-from src.engine.base.base import Base
-from src.engine.executor.action.action import Action
-from src.engine.executor.generator.generator import Generator
-from src.engine.executor.tool.tool import Tool
+from engine.base.base import Base
+from engine.executor.action.action import Action
+from engine.executor.generator.generator import Generator
+from engine.executor.tool.tool import Tool
 
 class Scheduler(Base):
     # 定义提示模板中的calss字段与py定义的类名的映射关系

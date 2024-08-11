@@ -4,7 +4,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 
-from ...config import LOG_PATH,LOG_MODE
+from config import LOG_PATH,LOG_MODE
 
 # 基础日志类
 class BaseLogger:
