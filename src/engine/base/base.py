@@ -2,17 +2,14 @@
 
 import os
 from abc import ABC, abstractmethod
-from bson import ObjectId
 import json
 
-# 导入配置文件从而确定根路径
-from ...config import root_path
 # 从配置文件获取提示模板读入的方式
 from config import TEMPLATE_LOAD_METHOD
 if TEMPLATE_LOAD_METHOD == 'mongodb':
     from services.mongodb.mongodb import mongo_db
 elif TEMPLATE_LOAD_METHOD == 'file':
-    from ...config import TEMPLATE_FILE_PATH
+    from config import TEMPLATE_FILE_PATH
 
 # 定义基础类
 class Base:
@@ -69,21 +66,12 @@ class Base:
 
     # 从mongoDB读取提示模板方法
     @staticmethod
-    def load_template_by_mongodb(index_name, id):
-        try:
-            # 转换字符串id为ObjectId
-            object_id = ObjectId(id)
-        except Exception as e:
-            raise self.ValueError(f"无效的id: {id}. {str(e)}")
-        
+    def load_template_by_mongodb(index_name, object_id):
         try:
             # 使用实例化的MongoDB类的find_data方法查找数据
-            data = mongo_db.find_one(index_name, {'_id': object_id})
-            if not data:
-                raise FileNotFoundError(f"没有找到id为{id}的数据")
-            
-            # 将返回的JSON字符串转换为字典
-            data_dict = json.loads(data)
+            data_dict = mongo_db.find_one(index_name, {'_id': object_id})
+            if not data_dict:
+                raise FileNotFoundError(f"没有找到id为{object_id}的数据")
             return data_dict
         except Exception as e:
             raise e
@@ -95,7 +83,7 @@ class Base:
 
         # 检查类名是否合法，只有Action、Generator、Process、Task可以获取提示模板
         if class_name not in self.CLASS_NAME_MAPPING:
-            raise self.ValueError("class_type必须是Action、Generator、Process、Task中的一个")
+            raise self.ValidationError("class_type必须是Action、Generator、Process、Task中的一个")
 
         # 类名转换成索引类名
         index_name = self.CLASS_NAME_MAPPING[class_name]
