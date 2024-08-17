@@ -7,6 +7,8 @@ import os
 
 from config import MONGO_CONFIG
 from services.logger.base_logger import BaseLogger
+from ..logger.base_logger import BaseLogger
+
 
 class MongoDB:
     def __init__(self):
@@ -44,9 +46,16 @@ class MongoDB:
                 attempt += 1
                 time.sleep(2 ** attempt)  # Exponential backoff
             except Exception as e:
-                self.logger.error(f"Unexpected error: {e}")
-                return
-
+                self.logger.error(f"Unexpected error during connection attempt {attempt}: {e}")
+                if attempt == self.connect_attempts:
+                    return
+                attempt += 1
+                
+    def close(self):
+        if self.client:
+            self.client.close()
+            self.logger.info("MongoDB connection closed.")
+            
     def get_collection(self, collection_name):
         return self.db[collection_name]
     

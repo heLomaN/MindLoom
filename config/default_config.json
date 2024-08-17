@@ -32,14 +32,13 @@
                 "Authorization": "Bearer api_token"
             }
         },
-        "rabbitmq_config": {
-            "mode": "rabbitmq",
-            "host": "localhost",
-            "port": 5672,
-            "username": "guest",
-            "password": "guest"
-            }
-        },
+        "rabbitmq": {
+            "username": "your-username",
+            "password": "your-password",
+            "host": "your-host",
+            "port": "your-port"
+        }
+    },
     "tools": {
         "default_define": "local",
         "local_define": {

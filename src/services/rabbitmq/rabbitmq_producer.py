@@ -1,26 +1,25 @@
-import time
+# src/services/rabbitmq/rabbitmq_producer.py
 
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
+
+import time
 import pika
 import json
-import configparser
-
+import threading
 from services.logger.base_logger import BaseLogger
 
 logger = BaseLogger("rabbitmq")
 
-# 从INI文件中读取配置信息
-def _load_config(filename):
-    config = configparser.ConfigParser()
-    config.read(filename)
-    return config
-
-
-def load_mq_config_parameters(config_path="config.ini"):
-    # 从config.ini文件中加载配置信息
-    config = _load_config(config_path)
+def load_mq_config_parameters(config_path="config/rabbitmq_config.json"):
+    # 从 JSON 文件中加载配置信息
+    with open(config_path, 'r') as f:
+        rabbitmq_config = json.load(f)['rabbitmq']
 
     # 提取RabbitMQ的配置信息
-    rabbitmq_config = config["rabbitmq"]
     username = rabbitmq_config["username"]
     password = rabbitmq_config["password"]
     host = rabbitmq_config["host"]
@@ -42,7 +41,7 @@ class MQClient:
         self.channel = self.connection.channel()
         self.channel.queue_declare(queue='request_queue', durable=True)
         self.channel.queue_declare(queue='response_queue', durable=True)
-
+        
     def close(self):
         if self.connection.is_open:
             self.connection.close()
@@ -146,8 +145,3 @@ def non_blocking_test():
     finally:
         client.close()
         logger.info("Connection closed")
-
-
-if __name__ == '__main__':
-    non_blocking_test()
-    blocking_test()

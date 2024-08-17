@@ -8,23 +8,33 @@ import json
 root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # 获取默认配置文件路径
 config_path = os.path.join(root_path,'config/config.json')
+default_config_path = os.path.join(root_path,'config/default_config.json')  # 如果不存在则读取 default_config.json
 # 从文件中加载 JSON 数据
 class Config:
     def __init__(self, config_path=config_path):
-        self.config_path = config_path
+        self.config_path = config_path if os.path.exists(config_path) else default_config_path
         self.config = self.load_config()
 
     def load_config(self):
         try:
             with open(self.config_path, 'r') as config_file:
-                return json.load(config_file)
-        except FileNotFoundError:
-            print(f"Configuration file not found: {self.config_path}")
-            return {}
-        except json.JSONDecodeError:
-            print(f"Error decoding JSON from the configuration file: {self.config_path}")
-            return {}
+                config_data = json.load(config_file)
+                
+                rabbitmq_config_path = os.path.join(root_path, 'config/rabbitmq_config.json')
+                if os.path.exists(rabbitmq_config_path):
+                    with open(rabbitmq_config_path, 'r') as rabbitmq_file:
+                        rabbitmq_config = json.load(rabbitmq_file)
+                        config_data.update(rabbitmq_config)
 
+                return config_data
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(f"Error loading configuration: {e}")
+            return {}
+        
+    # Consider adding a method to refresh configuration
+    def refresh_config(self):
+        self.config = self.load_config()
+        
     def get(self, key, default=None):
         keys = key.split('.')
         value = self.config
@@ -74,7 +84,3 @@ MONGO_CONFIG = config.get('prompts.mongodb_config', {
     })
 # if 'mongodb_config' in config_json:
 #     MONGO_CONFIG = config_json['mongodb_config']
-
-# Example usage
-if __name__ == "__main__":
-    print(config.get("随便来个database url","database"))
