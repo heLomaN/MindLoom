@@ -20,15 +20,20 @@ class Config:
             with open(self.config_path, 'r') as config_file:
                 config_data = json.load(config_file)
                 
-                rabbitmq_config_path = os.path.join(root_path, 'config/rabbitmq_config.json')
-                if os.path.exists(rabbitmq_config_path):
-                    with open(rabbitmq_config_path, 'r') as rabbitmq_file:
-                        rabbitmq_config = json.load(rabbitmq_file)
-                        config_data.update(rabbitmq_config)
+                # 检查'rabbitmq'键是否存在
+                if 'rabbitmq' in config_data:
+                    # 从环境变量中加载敏感信息
+                    config_data['rabbitmq']['username'] = os.getenv('RABBITMQ_USERNAME', config_data['rabbitmq'].get('username'))
+                    config_data['rabbitmq']['password'] = os.getenv('RABBITMQ_PASSWORD', config_data['rabbitmq'].get('password'))
+                else:
+                    raise KeyError("'rabbitmq' 配置项在配置文件中缺失。")
 
                 return config_data
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Error loading configuration: {e}")
+            print(f"加载配置时出错: {e}")
+            return {}
+        except KeyError as ke:
+            print(f"配置文件中缺失必需的配置项: {ke}")
             return {}
         
     # Consider adding a method to refresh configuration

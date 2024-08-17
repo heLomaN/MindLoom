@@ -7,13 +7,13 @@
             "name": "name",
             "type": "string",
             "description": "待过滤的行业名字"
-        },
+        }
     ],
     "outputs": [
         {
             "name": "name",
             "type": "string",
             "description": "过滤后的行业名字"
-        },
+        }
     ]
 }

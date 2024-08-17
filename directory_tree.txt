@@ -1,0 +1,112 @@
+├── README.md
+├── config
+│   └── default_config.json
+├── docs
+│   └── api_documentation.md
+├── log
+│   ├── mongodb.log
+│   ├── rabbitmq.log
+│   └── test_logger.log
+├── notebooks
+│   └── example_usage.ipynb
+├── prompts
+│   ├── action
+│   │   └── action_0001.Businessb_name_filtering.json
+│   ├── generator
+│   │   ├── generate_0001.baike_keyword_gen.json
+│   │   └── generate_0002.answer_by_baidubaike.json
+│   ├── process
+│   │   ├── process_0001.main.json
+│   │   └── process_0002.searchBaiduBaike.json
+│   ├── task
+│   │   └── task_0001.baidu_baike_answer.json
+│   └── tool
+│       └── tool_00001.百度百科.json
+├── requirements.txt
+├── setup.py
+├── src
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── config.cpython-310.pyc
+│   ├── config.py
+│   ├── engine
+│   │   ├── base
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   └── base.cpython-310.pyc
+│   │   │   └── base.py
+│   │   ├── executor
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   └── executor.cpython-310.pyc
+│   │   │   ├── action
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   └── action.cpython-310.pyc
+│   │   │   │   └── action.py
+│   │   │   ├── executor.py
+│   │   │   ├── generator
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   └── generator.cpython-310.pyc
+│   │   │   │   └── generator.py
+│   │   │   └── tool
+│   │   │       ├──  calculate
+│   │   │       │   └── __init__.py
+│   │   │       ├── __init__.py
+│   │   │       ├── __pycache__
+│   │   │       │   ├── __init__.cpython-310.pyc
+│   │   │       │   └── tool.cpython-310.pyc
+│   │   │       ├── tool.py
+│   │   │       └── web
+│   │   │           └── __init__.py
+│   │   ├── scheduler
+│   │   │   ├── __init__.py
+│   │   │   ├── __pycache__
+│   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   └── scheduler.cpython-310.pyc
+│   │   │   ├── process
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── __pycache__
+│   │   │   │   │   ├── __init__.cpython-310.pyc
+│   │   │   │   │   └── process.cpython-310.pyc
+│   │   │   │   └── process.py
+│   │   │   ├── scheduler.py
+│   │   │   └── task
+│   │   │       ├── __init__.py
+│   │   │       ├── __pycache__
+│   │   │       │   ├── __init__.cpython-310.pyc
+│   │   │       │   └── task.cpython-310.pyc
+│   │   │       └── task.py
+│   │   └── utils
+│   │       └── __init__.py
+│   ├── main.py
+│   └── services
+│       ├── logger
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-310.pyc
+│       │   │   └── base_logger.cpython-310.pyc
+│       │   └── base_logger.py
+│       ├── mongodb
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-310.pyc
+│       │   │   └── mongodb.cpython-310.pyc
+│       │   └── mongodb.py
+│       └── rabbitmq
+│           ├── __init__.py
+│           ├── __pycache__
+│           │   ├── __init__.cpython-310.pyc
+│           │   └── rabbitmq_producer.cpython-310.pyc
+│           └── rabbitmq_producer.py
+└── tests
+    ├── base_test.py
+    ├── baselog_test.py
+    ├── generator_test.py
+    ├── task_test.py
+    └── test_rabbitmq_producer.py

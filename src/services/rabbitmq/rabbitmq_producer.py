@@ -14,12 +14,15 @@ from services.logger.base_logger import BaseLogger
 
 logger = BaseLogger("rabbitmq")
 
-def load_mq_config_parameters(config_path="config/rabbitmq_config.json"):
-    # 从 JSON 文件中加载配置信息
+def load_mq_config_parameters(config_path="config/default_config.json"):
     with open(config_path, 'r') as f:
-        rabbitmq_config = json.load(f)['rabbitmq']
+        config_data = json.load(f)
+        print(config_data)  # 调试时打印整个配置文件内容
+        if 'rabbitmq' not in config_data.get('actions', {}):
+            raise KeyError("'rabbitmq' 配置项在配置文件中缺失。")
+        rabbitmq_config = config_data['actions']['rabbitmq']
 
-    # 提取RabbitMQ的配置信息
+    # 继续执行原本的逻辑
     username = rabbitmq_config["username"]
     password = rabbitmq_config["password"]
     host = rabbitmq_config["host"]
@@ -33,6 +36,9 @@ def load_mq_config_parameters(config_path="config/rabbitmq_config.json"):
     )
 
     return parameters
+
+
+
 
 
 class MQClient:
@@ -88,30 +94,45 @@ class BlockingMQClient(MQClient):
 class NoneBlockingMQClient(BlockingMQClient):
     def __init__(self, parameters):
         super().__init__(parameters)
+        self.lock = threading.Lock()  # Add a lock to ensure thread safety
 
-    # 从指定队列中获取一条消息
     def fetch_one_msg(self, queue_name):
-        method_frame, header_frame, body = self.channel.basic_get(queue=queue_name, auto_ack=True)
-        if method_frame:
-            data_rev = body.decode('utf-8')
-            logger.info(f"Queue has message: {data_rev}")
-            return data_rev
-        else:
-            logger.info("Queue is empty.")
-            return None
+        with self.lock:  # Ensure only one thread accesses the queue at a time
+            method_frame, header_frame, body = self.channel.basic_get(queue=queue_name, auto_ack=True)
+            if method_frame:
+                data_rev = body.decode('utf-8')
+                logger.info(f"Queue has message: {data_rev}")
+                return data_rev
+            else:
+                logger.info("Queue is empty.")
+                return None
 
-    # 向指定队列发送一条消息
     def send_one_msg(self, queue_name, message):
-        self.channel.basic_publish(
-            exchange='',
-            routing_key=queue_name,
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # 设置消息持久化
+        with self.lock:
+            self.channel.basic_publish(
+                exchange='',
+                routing_key=queue_name,
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=2,  # Persistent message
+                )
             )
-        )
-        logger.info(f"Send msg: {message}")
-        return True
+            logger.info(f"Send msg: {message}")
+            return True
+
+    # 新增的支持多线程的轮询方法
+    def poll_and_process(self, process_callback, timeout=30):
+        start_time = time.time()
+        while True:
+            with self.lock:
+                response = self.fetch_one_msg('response_queue')
+                if response:
+                    process_callback(response)
+                if time.time() - start_time > timeout:
+                    logger.error("Polling timeout.")
+                    return
+
+            time.sleep(1)
 
 
 # Main function to control execution
