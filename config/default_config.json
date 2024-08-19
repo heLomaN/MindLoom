@@ -33,12 +33,11 @@
             }
         },
         "rabbitmq": {
-            "username": "administrator",
-            "password": "Fu4Dy8Bk2Tk4",
-            "host": "101.200.84.52",
-            "port": 5672
+            "username": "your-username",
+            "password": "your-password",
+            "host": "your-host",
+            "port": "your-port"
         }
-
     },
     "tools": {
         "default_define": "local",

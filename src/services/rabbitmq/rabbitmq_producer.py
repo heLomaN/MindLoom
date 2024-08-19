@@ -2,6 +2,7 @@
 
 import sys
 import os
+from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
@@ -23,15 +24,17 @@ def load_mq_config_parameters(config_path="config/default_config.json"):
         rabbitmq_config = config_data['actions']['rabbitmq']
 
     # 继续执行原本的逻辑
-    username = rabbitmq_config["username"]
-    password = rabbitmq_config["password"]
-    host = rabbitmq_config["host"]
-    port = int(rabbitmq_config["port"])
+    load_dotenv()  # 加载 .env 文件
 
-    credentials = pika.PlainCredentials(username=username, password=password)
+    rabbitmq_username = os.getenv("RABBITMQ_USERNAME", rabbitmq_config.get("username"))
+    rabbitmq_password = os.getenv("RABBITMQ_PASSWORD", rabbitmq_config.get("password"))
+    rabbitmq_host = os.getenv("RABBITMQ_HOST", rabbitmq_config.get("host"))
+    rabbitmq_port = int(os.getenv("RABBITMQ_PORT", rabbitmq_config.get("port")))
+
+    credentials = pika.PlainCredentials(username=rabbitmq_username, password=rabbitmq_password)
     parameters = pika.ConnectionParameters(
-        host=host,
-        port=port,
+        host=rabbitmq_host,
+        port=rabbitmq_port,
         credentials=credentials
     )
 
