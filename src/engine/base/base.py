@@ -27,7 +27,7 @@ class Base:
         'Task': 'task'
     }
     # 定义参数类型种类
-    PARAMETER_TYPE = ['string','string-list']
+    PARAMETER_TYPE = ['string',' number','bool','array','object','vector']
 
     # 动态存储参数的字典
     parameters = {}
@@ -149,7 +149,7 @@ class Base:
         if param_type == 'string':
             if not isinstance(param_value, str):
                 raise self.ValidationError(f"参数 {param_name} 应该是字符串。")
-        elif param_type == 'string-list':
+        elif param_type == 'array':
             if not isinstance(param_value, list) or not all(isinstance(item, str) for item in param_value):
                 raise self.ValidationError(f"参数 {param_name} 应该是一个字符串列表。")
 
