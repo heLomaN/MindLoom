@@ -28,13 +28,16 @@ class Action(Executor):
         
         self.mq_client.send_one_msg('request_queue', request_message)
 
-        timeout = int(inputs.get("overtime", 30))  # 将 overtime 转换为整数
+        try:
+            timeout = int(inputs.get("overtime", 30))  # 将 overtime 转换为整数
+        except ValueError:
+            return {"error": "Invalid overtime value, must be an integer."}
+        
         start_time = time.time()
 
         while True:
             response = self.mq_client.fetch_one_msg('response_queue')
             
-            # 处理队列为空的情况
             if response is None:
                 break
             

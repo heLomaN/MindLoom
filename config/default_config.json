@@ -5,18 +5,18 @@
     },
     "prompts": {
         "default_source": "file",
-        "file_config":{
+        "file_config": {
             "source": "file",
             "file_path": "prompts/"
         },
         "mongodb_config": {
-            "source": "mongodb",
-            "host": "localhost",
-            "port": 27017,
-            "username": "db_username",
-            "password": "db_password",
-            "db_name": "db_name",
-            "auth_source": "admin"
+            "host": "101.200.84.52",
+            "port": 36847,
+            "username": "wing",
+            "password": "wingofhope2024",
+            "db_name": "prompt",
+            "auth_source": "admin",
+            "connection_string": "mongodb://wing:wingofhope2024@101.200.84.52:36847/prompt"
         }
     },
     "generate": {
@@ -33,10 +33,10 @@
             }
         },
         "rabbitmq": {
-            "username": "your-username",
-            "password": "your-password",
-            "host": "your-host",
-            "port": "your-port"
+            "username": "administrator",
+            "password": "Fu4Dy8Bk2Tk4",
+            "host": "101.200.84.52",
+            "port": "5672"
         }
     },
     "tools": {
@@ -47,7 +47,7 @@
         }
     },
     "performance": {
-        "task":{
+        "task": {
             "max_processes": 2,
             "max_threads": 5,
             "max_executor_timeout": 6000,
@@ -73,4 +73,3 @@
         }
     }
 }
-  
