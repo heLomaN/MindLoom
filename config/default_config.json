@@ -10,33 +10,33 @@
             "file_path": "prompts/"
         },
         "mongodb_config": {
-            "host": "101.200.84.52",
-            "port": 36847,
-            "username": "wing",
-            "password": "wingofhope2024",
-            "db_name": "prompt",
-            "auth_source": "admin",
-            "connection_string": "mongodb://wing:wingofhope2024@101.200.84.52:36847/prompt"
+            "host": "<MONGODB_HOST>",
+            "port": <MONGODB_PORT>,
+            "username": "<MONGODB_USERNAME>",
+            "password": "<MONGODB_PASSWORD>",
+            "db_name": "<MONGODB_DB_NAME>",
+            "auth_source": "<MONGODB_AUTH_SOURCE>",
+            "connection_string": "mongodb://<MONGODB_USERNAME>:<MONGODB_PASSWORD>@<MONGODB_HOST>:<MONGODB_PORT>/<MONGODB_DB_NAME>"
         }
     },
     "generate": {
-        "llm": ["gpt","baichuan2"]
+        "llm": ["gpt", "baichuan2"]
     },
     "actions": {
         "default_mode": "rabbitmq",
         "type": ["Synchronous", "asynchronous", "callback"],
         "REST_API_config": {
             "mode": "REST_API",
-            "url": "https://xiaoxi.com/actions/v1/api",
+            "url": "<API_URL>",
             "headers": {
-                "Authorization": "Bearer api_token"
+                "Authorization": "Bearer <API_TOKEN>"
             }
         },
         "rabbitmq": {
-            "username": "administrator",
-            "password": "Fu4Dy8Bk2Tk4",
-            "host": "101.200.84.52",
-            "port": "5672"
+            "username": "<RABBITMQ_USERNAME>",
+            "password": "<RABBITMQ_PASSWORD>",
+            "host": "<RABBITMQ_HOST>",
+            "port": "<RABBITMQ_PORT>"
         }
     },
     "tools": {
