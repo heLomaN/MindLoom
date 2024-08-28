@@ -9,4 +9,3 @@ venv/
 **/.code-workspace
 log/
 config/config.json
-.env
