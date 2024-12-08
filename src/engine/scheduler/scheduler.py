@@ -20,61 +20,98 @@ class Scheduler(Base):
     def __init__(self, id, secret):
         super().__init__(id, secret)
 
-    # 校验call的提示模板是否合法
-    def validate_template_call(self, call_dict):   
+    @classmethod
+    def validate_template_call(cls, call_dict):
+        errors = []  # 用于记录所有校验错误
+        validated_call = {}  # 用于存储验证通过的字段
+
         # 检查 call_dict 是否是一个字典
         if not isinstance(call_dict, dict):
-            raise self.TemplateError("call_dict 必须是一个字典/MAP。")
-        
-        # 检查必要的键是否存在且类型正确
-        if "class" not in call_dict or not isinstance(call_dict["class"], str) or call_dict["class"] not in self.EXECUTION_CLASS_MAPPING:
-            raise self.TemplateError("class 必须是action，generator，process或者tool。")
-        
-        if "id" not in call_dict or not isinstance(call_dict["id"], str):
-            raise self.TemplateError("id 必须存在并且是一个字符串。")
-        
-        if "inputs" not in call_dict or (call_dict["inputs"] is not None and not isinstance(call_dict["inputs"], list)):
-            raise self.TemplateError("inputs 必须存在，要么是 None 要么是一个列表。")
-        
-        if "outputs" not in call_dict or (call_dict["outputs"] is not None and not isinstance(call_dict["outputs"], list)):
-            raise self.TemplateError("outputs 必须存在，要么是 None 要么是一个列表。")
-        
-        # 检查 inputs 和 outputs 的合法性
-        for key in ["inputs", "outputs"]:
-            # inputs 和 outputs 必须是一个字典
-            if call_dict[key] is not None:
-                for item in call_dict[key]:
-                    if not isinstance(item, dict):
-                        raise self.TemplateError(f"{key} 必须是一个字典/MAP。")
-                    
-                    # inputs 和 outputs 必须包含name，type字段
-                    required_item_keys = ["name", "type"]
-                    for item_key in required_item_keys:
-                        if item_key not in item:
-                            raise self.TemplateError(f"{key} 中的必须包含 '{item_key}'。")
-                    
-                    # type字段的值必须是预定义的值
-                    type_name = item["type"]
-                    if type_name not in self.PARAMETER_TYPE:
-                        param_name = item["name"]
-                        raise self.TemplateError(f"'{key}'中的'{param_name}'的'type'不能是'{type_name}'。")
+            errors.append("call_dict 必须是一个字典/MAP。")
+        else:
+            # 检查 "class" 键
+            if "class" not in call_dict or not isinstance(call_dict["class"], str) or call_dict["class"] not in cls.EXECUTION_CLASS_MAPPING:
+                errors.append("class 必须是 action，generator，process 或者 tool。")
+            else:
+                validated_call["class"] = call_dict["class"]
 
-                    # 校验inputs必须包含source或者value
-                    if key == "inputs":
-                        if "source" not in item and "value" not in item:
-                            raise self.TemplateError(f"{key} 中的必须包含 'source'或者'value'。")
-                    # 校验outputs必须包含source
-                    elif key == "outputs":
-                        if "source" not in item:
-                            raise self.TemplateError(f"{key} 中的必须包含 'source'。")
+            # 检查 "id" 键
+            if "id" not in call_dict or not isinstance(call_dict["id"], str):
+                errors.append("id 必须存在并且是一个字符串。")
+            else:
+                validated_call["id"] = call_dict["id"]
+
+            # 检查 "inputs" 和 "outputs" 键
+            for key in ["inputs", "outputs"]:
+                if key not in call_dict or (call_dict[key] is not None and not isinstance(call_dict[key], list)):
+                    errors.append(f"{key} 必须存在，要么是 None 要么是一个列表。")
+                else:
+                    validated_call[key] = call_dict[key]
+
+                    # 验证 inputs 和 outputs 的具体内容
+                    if call_dict[key] is not None:
+                        for item in call_dict[key]:
+                            if not isinstance(item, dict):
+                                errors.append(f"{key} 的每一项必须是一个字典/MAP。")
+                                continue
+
+                            # 检查每个 item 是否包含 "name" 和 "type" 键
+                            required_item_keys = ["name", "type"]
+                            for item_key in required_item_keys:
+                                if item_key not in item:
+                                    errors.append(f"{key} 中的每项必须包含 '{item_key}'。")
+
+                            # 检查 "type" 的值是否合法
+                            if "type" in item:
+                                type_name = item["type"]
+                                if type_name not in cls.PARAMETER_TYPE:
+                                    param_name = item.get("name", "未知")
+                                    errors.append(f"'{key}' 中的 '{param_name}' 的 'type' 不能是 '{type_name}'。")
+
+                            # 检查 inputs 和 outputs 的特定字段
+                            if key == "inputs":
+                                if "source" not in item and "value" not in item:
+                                    errors.append(f"{key} 中的每项必须包含 'source' 或 'value'。")
+                            elif key == "outputs":
+                                if "source" not in item:
+                                    errors.append(f"{key} 中的每项必须包含 'source'。")
+
+        # 如果有错误，抛出 TemplateError 并包含所有错误信息
+        if errors:
+            raise cls.TemplateError(errors)
+
+        # 返回经过验证的模板
+        return validated_call
 
     # 校验提示模板是否合法
-    def validate_template(self):
-        super().validate_template()
+    @classmethod
+    def validate_template(cls, template):
+        errors = []  # 用于记录所有校验错误
+        validated_template = {}  # 用于存储验证通过的字段
 
-        # 校验调度器必须包含execution
-        if 'execution' not in self.template:
-            raise self.TemplateError("调度器模板必须包含'execution'。")
+        # 获取当前类名
+        class_name = cls.__name__
+        class_name = class_name.lower()
+
+        # 调用父类的 validate_template 方法
+        try:
+            validated_template = super().validate_template(template)
+        except cls.TemplateError as base_errors:
+            # 从父类校验中收集错误
+            errors.extend(base_errors.errors)
+
+        # 校验调度器必须包含 'execution'
+        if 'execution' in template:
+            validated_template['execution'] = {}
+        else:
+            errors.append(f"'{class_name}' 中必须包含 'execution' 字段。")
+
+        # 如果有错误，抛出 TemplateError 并包含所有错误信息
+        if errors:
+            raise cls.TemplateError(errors)
+
+        # 返回经过验证的模板
+        return validated_template
 
     # 执行一次嵌套调用
     def call_execute(self, call_dict):

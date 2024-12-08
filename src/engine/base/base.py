@@ -1,146 +1,138 @@
 # src/engine/base/base.py
 
-import os
 from abc import ABC, abstractmethod
-import json
-
-# 从配置文件获取提示模板读入的方式
-from config import TEMPLATE_LOAD_METHOD
-if TEMPLATE_LOAD_METHOD == 'mongodb':
-    from services.mongodb.mongodb import mongo_db
-elif TEMPLATE_LOAD_METHOD == 'file':
-    from config import TEMPLATE_FILE_PATH
+from engine.base.template_loader import TemplateLoader
 
 # 定义基础类
 class Base:
     # 定义模版校验错误的类
     class TemplateError(Exception):
-        pass
+        def __init__(self, errors):
+            super().__init__("Template 格式校验失败：")
+            self.errors = errors
     # 定义值校验错误类
-    class ValidationError(Exception):
-        pass
-    # 定义类名字映射的文件夹、数据库的名字
-    CLASS_NAME_MAPPING = {
-        'Action': 'action',
-        'Generator': 'generator',
-        'Process': 'process',
-        'Task': 'task'
-    }
+    class ParameterError(Exception):
+        def __init__(self, errors):
+            super().__init__("参数格式校验失败：")
+            self.errors = errors
+
     # 定义参数类型种类
     PARAMETER_TYPE = ['string',' number','bool','array','object','vector']
+    
+    # 定义提示模版
+    template = {}
 
     # 动态存储参数的字典
     parameters = {}
 
+    #构造函数加载模板和校验模板
     def __init__(self, id, secret):
         self.id = id
         self.secret = secret
-        # 初始化模板
-        self.template = self.load_template()
-        # 校验模板是否合法
-        self.validate_template()
 
-    # 从本地文件读取提示模板方法
-    @staticmethod
-    def load_template_by_file(index_name, id):
-        # 生成完整文件夹路径名字
-        folder_path = os.path.join(TEMPLATE_FILE_PATH, index_name)
-        
-        # 确认文件夹路径存在
-        if not os.path.exists(folder_path):
-            raise FileNotFoundError(f"文件夹{folder_path}不存在")
-        
-        try:
-            # 查找匹配的文件
-            for filename in os.listdir(folder_path):
-                if filename.startswith(id):
-                    file_path = os.path.join(folder_path, filename)
-                    # 读取文件内json内容
-                    with open(file_path, 'r', encoding='utf-8') as file:
-                        file_content = file.read()
-                        data_dict = json.loads(file_content)
-                        return data_dict
-            raise FileNotFoundError(f"没有找到id为{id}的文件")
-        except Exception as e:
-            raise e
-
-    # 从mongoDB读取提示模板方法
-    @staticmethod
-    def load_template_by_mongodb(index_name, object_id):
-        try:
-            # 使用实例化的MongoDB类的find_data方法查找数据
-            data_dict = mongo_db.find_one(index_name, {'_id': object_id})
-            if not data_dict:
-                raise FileNotFoundError(f"没有找到id为{object_id}的数据")
-            return data_dict
-        except Exception as e:
-            raise e
-
-    # 读取提示模板函数
-    def load_template(self):
-        # 获取当前类名
+        # 获取当前类名作为class_name
         class_name = self.__class__.__name__
+        # 转换成小写，因为文件名和mongoDB默认用小写标记类
+        class_name = class_name.lower()
 
-        # 检查类名是否合法，只有Action、Generator、Process、Task可以获取提示模板
-        if class_name not in self.CLASS_NAME_MAPPING:
-            raise self.ValidationError("class_type必须是Action、Generator、Process、Task中的一个")
+        try:
+            # 读取模板
+            template = TemplateLoader.load_template(class_name,id)
+            # 校验模板是否合法
+            self.template = self.validate_template(template)
+    
+        except FileNotFoundError as fnf_error:
+            # 模板未找到，抛出更明确的异常信息
+            raise ValueError(f"无法初始化实例：模板未找到 (id={self.id})。") from fnf_error
 
-        # 类名转换成索引类名
-        index_name = self.CLASS_NAME_MAPPING[class_name]
+        except self.TemplateError as te:
+            # 模板校验失败，抛出更明确的异常信息
+            raise ValueError(f"无法初始化实例：模板格式校验失败 (id={self.id})，错误信息: {te.errors}") from te
         
-        # 从本地文件夹读取模板
-        if TEMPLATE_LOAD_METHOD == 'file':
-            return self.load_template_by_file(index_name, self.id)
-        # 从MongoDB中读取模板
-        elif TEMPLATE_LOAD_METHOD == 'mongodb':
-            return self.load_template_by_mongodb(index_name, self.id)
-        else:
-            return {}
+        except ValueError as ve:
+            # 捕获其他潜在的 ValueError
+            raise ValueError(f"无法初始化实例：无效的值 (id={self.id})。") from ve
+
+        except Exception as e:
+            # 捕获所有其他异常，抛出 RuntimeError 以提供详细的上下文
+            raise RuntimeError(f"实例初始化时发生未知错误 (id={self.id})。") from e
+
 
     # 获取提示模板
     def get_template(self):
         return self.template
 
     # 校验提示模板是否合法
-    def validate_template(self):
-        # 检查template是否存在
-        if not self.template:
-            raise self.TemplateError("模板不能为空。")
+    @classmethod
+    def validate_template(cls,template):
+        errors = []  # 用于记录所有校验错误
+        validated_template = {}  # 用于存储验证通过的字段
 
-        # 检查 template 是否是一个字典
-        if not isinstance(self.template, dict):
-            raise self.TemplateError("模板必须是一个字典。")
+        # 检查 template 是否存在且为字典
+        if not template:
+            errors.append("模板不能为空。")
+        elif not isinstance(template, dict):
+            errors.append("模板必须是一个字典。")
         
-        # 检查必须的参数 name, description, inputs, outputs 是否在 template 中
-        required_keys = ["name", "description", "inputs", "outputs"]
-        for key in required_keys:
-            if key not in self.template:
-                raise self.TemplateError(f"模板必须包含'{key}'。")
+        # 如果 template 通过初步检查，开始逐个字段校验
+        if not errors:
+            # 检查必须的参数 name, description, inputs, outputs 是否在 template 中
+            required_keys = ["name", "description", "inputs", "outputs"]
+            for key in required_keys:
+                if key not in template:
+                    errors.append(f"模板必须包含 '{key}'。")
+                else:
+                    validated_template[key] = template[key]  # 将字段添加到验证通过的字典
 
-        # 检查 inputs 和 outputs 是否合法
-        for key in ["inputs", "outputs"]:
-            # 检查inputs 和 outputs值只能是 list 或 None
-            if self.template[key] is not None and not isinstance(self.template[key], list):
-                raise self.TemplateError(f"'{key}'必须是一个列表或null。")
-            
-            # 如果是 list（不是None），则检查每个元素是否是字典，并包含 name, description, type
-            if isinstance(self.template[key], list):
-                for item in self.template[key]:
-                    # 检查inputs 和 outputs的值只能是字典
-                    if not isinstance(item, dict):
-                        raise self.TemplateError(f"'{key}'中的每个元素必须是一个字典/MAP。")
+            # 如果 `inputs` 和 `outputs` 存在，检查它们的合法性
+            for key in ["inputs", "outputs"]:
+                if key in validated_template:
+                    value = template[key]
                     
-                    # 检查inputs 和 outputs 必须包含的元素
-                    required_item_keys = ["name", "description", "type"]
-                    for item_key in required_item_keys:
-                        if item_key not in item:
-                            raise self.TemplateError(f"'{key}'中的每个元素必须包含'{item_key}'。")
+                    # 确保值是列表或 None
+                    if value is not None and not isinstance(value, list):
+                        errors.append(f"'{key}' 必须是一个列表或 null。")
+                    elif isinstance(value, list):
+                        validated_items = []
+                        for item in value:
+                            # 检查每个元素必须是字典
+                            if not isinstance(item, dict):
+                                errors.append(f"'{key}' 中的每个元素必须是一个字典。")
+                                continue
+                            
+                            # 检查字典中必须包含的元素
+                            item_errors = []
+                            required_item_keys = ["name", "description", "type"]
+                            validated_item = {}
+                            for item_key in required_item_keys:
+                                if item_key not in item:
+                                    item_errors.append(f"'{item_key}' 在 '{key}' 中的每个元素中必须存在。")
+                                else:
+                                    validated_item[item_key] = item[item_key]  # 添加字段
 
-                    # 检查type类型合法性
-                    type_name = item["type"]
-                    if type_name not in self.PARAMETER_TYPE:
-                        param_name = item["name"]
-                        raise self.TemplateError(f"'{key}'中的'{param_name}'的'type'不能是'{type_name}'。")
+                            # 检查 `type` 的合法性
+                            if "type" in validated_item:
+                                type_name = validated_item["type"]
+                                if type_name not in cls.PARAMETER_TYPE:
+                                    param_name = validated_item.get("name", "<unknown>")
+                                    item_errors.append(f"'{key}' 中的 '{param_name}' 的 'type' 无效：'{type_name}'。")
+
+                            # 如果该元素无错误，添加到 validated_items，否则记录错误
+                            if not item_errors:
+                                validated_items.append(validated_item)
+                            else:
+                                errors.extend(item_errors)
+                        
+                        # 如果整个列表无错误，将验证后的列表添加到 validated_template
+                        if not errors:
+                            validated_template[key] = validated_items
+
+        # 如果有错误，抛出 TemplateError 并包含所有错误信息
+        if errors:
+            raise cls.TemplateError(errors)
+
+        # 返回经过验证的模板
+        return validated_template
 
     # 参数类型合法校验
     @staticmethod
@@ -192,5 +184,6 @@ class Base:
 
     # 必须重载的run函数
     @abstractmethod
-    def run(self, inputs):
+    def run(self, instance_id, inputs):
+        self.instance_id = instance_id
         return {}
