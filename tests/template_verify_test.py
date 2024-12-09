@@ -11,8 +11,8 @@ from engine.scheduler.task.task import Task
 class TestTask(unittest.TestCase):
     def test_run_case1(self):
         template = {
-            "name":None,
-            "description":None,
+            "name":'1',
+            "description":'',
             "inputs": [],
             "outputs": None,
             "kkk": {},
@@ -21,11 +21,11 @@ class TestTask(unittest.TestCase):
                     "class": "action",
                     "id": "unique_id_123",
                     "inputs": [
-                        {"name": "input1", "type": "string", "source": "value"},
-                        {"name": "input2", "type": "object", "source": "value"}
+                        {"name": "input1", "type": "string"},
+                        {"name": "input2", "type": "objec", "source": "kl"}
                     ],
                     "outputs": [
-                        {"name": "output1", "type": "string", "source": "value"}
+                        {"name": "sd", "type": "strig", "target": None }
                     ]
                 }
             }
@@ -38,6 +38,20 @@ class TestTask(unittest.TestCase):
             print("模板验证失败，错误信息如下：")
             for error in e.errors:
                 print(f"- {error}")
+
+    def test_run_case2(self):
+        t_id = 'task_template_test0001'
+        inputs = {
+            'question' : '我想去天安门后天，什么时间合适？',
+        }
+        secret = None
+        try:
+            task_instance = Task(t_id, secret)
+            te = task_instance.get_template()
+            print(te)
+            # result = task_instance.run(inputs)
+        except Exception as e:
+            print(e)
 
 if __name__ == '__main__':
     unittest.main()

@@ -55,6 +55,7 @@ class Base:
 
         except Exception as e:
             # 捕获所有其他异常，抛出 RuntimeError 以提供详细的上下文
+            print(e)
             raise RuntimeError(f"实例初始化时发生未知错误 (id={self.id})。") from e
 
 
@@ -83,6 +84,15 @@ class Base:
                     errors.append(f"模板必须包含 '{key}'。")
                 else:
                     validated_template[key] = template[key]  # 将字段添加到验证通过的字典
+
+            # 如果 `name` 和 `description` 存在，检查它们的合法性
+            for key in ["name", "description"]:
+                if key in validated_template:
+                    value = template[key]
+
+                    # 确保值是string
+                    if value is None or not isinstance(value, str):
+                        errors.append(f"'{key}' 必须是一个字符串。")
 
             # 如果 `inputs` 和 `outputs` 存在，检查它们的合法性
             for key in ["inputs", "outputs"]:

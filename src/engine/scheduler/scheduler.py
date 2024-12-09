@@ -60,21 +60,32 @@ class Scheduler(Base):
                             for item_key in required_item_keys:
                                 if item_key not in item:
                                     errors.append(f"{key} 中的每项必须包含 '{item_key}'。")
+                                elif item[item_key] is None or not isinstance(item[item_key], str):
+                                    errors.append(f"'{key}' -> '{item_key}' 必须是一个字符串。")
+
+                            # 获取参数名字，如果漏写，打印：未知参数
+                            param_name = item.get("name", "未知参数")
 
                             # 检查 "type" 的值是否合法
                             if "type" in item:
                                 type_name = item["type"]
                                 if type_name not in cls.PARAMETER_TYPE:
-                                    param_name = item.get("name", "未知")
                                     errors.append(f"'{key}' 中的 '{param_name}' 的 'type' 不能是 '{type_name}'。")
 
                             # 检查 inputs 和 outputs 的特定字段
                             if key == "inputs":
                                 if "source" not in item and "value" not in item:
-                                    errors.append(f"{key} 中的每项必须包含 'source' 或 'value'。")
+                                    errors.append(f"'inputs' 中的 '{param_name}' 中必须包含 'source' 或 'value'。")
+                                else:
+                                    if item["source"] is None or not isinstance(item["source"], str):
+                                        errors.append(f"'inputs' 中的 '{param_name}' 的 'source' 必须是一个字符串。")
+
                             elif key == "outputs":
-                                if "source" not in item:
-                                    errors.append(f"{key} 中的每项必须包含 'source'。")
+                                if "target" not in item:
+                                    errors.append(f"{key} 中必须包含 'target'。")
+                                else:
+                                    if item["target"] is None or not isinstance(item["target"], str):
+                                        errors.append(f"'outputs' 中的 '{param_name}' 的 'target' 必须是一个字符串。") 
 
         # 如果有错误，抛出 TemplateError 并包含所有错误信息
         if errors:
