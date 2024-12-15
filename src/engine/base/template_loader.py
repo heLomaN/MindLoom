@@ -58,9 +58,19 @@ class TemplateLoader:
             # 其他异常的处理，增加上下文信息
             raise RuntimeError(f"加载MongoDB数据时发生异常，db_name={db_name}, object_id={object_id}。") from e
 
+    @staticmethod
+    def load_tools_template(tool_id):
+        pass
+
+
     # 读取提示模板函数
     @staticmethod
     def load_template(class_name, template_id):
+        # 如果是工具类直接返回引擎内模板
+        if class_name == 'tool':
+            return load_tools_template(template_id)
+
+        # 如果是任务、流程、操作或AI生成类则根据配置文件加载模板
         try:
             # 从本地文件夹读取模板
             if TEMPLATE_LOAD_METHOD == 'file':
