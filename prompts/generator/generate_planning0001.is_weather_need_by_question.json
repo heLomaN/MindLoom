@@ -1,8 +1,8 @@
 {
     "generator_id": "generate_planning0001",
-    "name":"is_weather_need_by_question",
+    "name": "is_weather_need_by_question",
     "description": "用户问题的第一步思考，判断是否出行问题，根据用户的问题决定是否需要调用天气API。",
-    "input": [
+    "inputs": [
         {
             "name": "question",
             "type": "string",
@@ -19,7 +19,7 @@
             "description": "时间描述字符串。"
         }
     ],
-    "output": [
+    "outputs": [
         {
             "name": "thinking",
             "description": "第一次根据问题的思考过程的记录。",
@@ -52,11 +52,17 @@
         }
     ],
     "template": {
-        "llm": "gpt",
-        "mode": "chat",
-        "parse":{
+        "llm": {
+            "mode": "chat",
+            "provider": "彩虹之眼",
+            "model": "gpt-4o",
+            "version": "v1",
+            "url": "https://gitaigc.com/v1/chat/completions"
+        },
+        
+        "parse": {
             "mode": "static",
-            "placeholder_format": "{{variable_name}}"
+            "placeholder_format": "{{variable}}"
         },
         "post_body": {
             "model": "gpt-4o-mini",
@@ -113,3 +119,4 @@
             ]
         }
     }
+}

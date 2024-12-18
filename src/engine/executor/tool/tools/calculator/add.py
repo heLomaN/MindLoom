@@ -1,17 +1,18 @@
-# src/engine/executor/tool/calculator/add.py
+# src/engine/executor/tool/tools/calculator/add.py
 
-class add:
+class Add:
     @staticmethod
     def metadata():
         return {
             "id": "calculator.add",
+            "name": "calculator_add",
             "description": "执行加法运算",
-            "input": [
-                {"name": "addend", "type": "int", "description": "第一个加数"},
-                {"name": "augend", "type": "int", "description": "第二个加数"}
+            "inputs": [
+                {"name": "addend", "type": "number", "description": "第一个加数"},
+                {"name": "augend", "type": "number", "description": "第二个加数"}
             ],
-            "output": [
-                {"name": "sum", "type": "int", "description": "加法结果"}
+            "outputs": [
+                {"name": "sum", "type": "number", "description": "加法结果"}
             ]
         }
 

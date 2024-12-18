@@ -10,6 +10,8 @@ if TEMPLATE_LOAD_METHOD == 'mongodb':
 elif TEMPLATE_LOAD_METHOD == 'file':
     from config import TEMPLATE_FILE_PATH
 
+from engine.executor.tool.tool_manager import tool_manager
+
 class TemplateLoader:
     # 从本地文件读取提示模板方法
     @staticmethod
@@ -17,11 +19,10 @@ class TemplateLoader:
         # 生成完整文件夹路径名字
         folder_path = os.path.join(TEMPLATE_FILE_PATH, folder_name)
 
-        # 确认文件夹路径存在
-        if not os.path.exists(folder_path):
-            raise FileNotFoundError(f"文件夹 {folder_path} 不存在。")
-        
         try:
+            # 确认文件夹路径存在
+            if not os.path.exists(folder_path):
+                raise FileNotFoundError(f"文件夹 {folder_path} 不存在。")
             # 查找匹配的文件
             for filename in os.listdir(folder_path):
                 if filename.startswith(template_id):
@@ -36,7 +37,7 @@ class TemplateLoader:
         
         except json.JSONDecodeError as e:
             # 处理JSON解码错误，提供详细的错误信息
-            raise ValueError(f"文件 {file_path} 中的JSON格式无效。") from e
+            raise RuntimeError(f"文件 {file_path} 中的JSON格式无效。") from e
         
         except Exception as e:
             # 捕获其他异常并提供上下文信息
@@ -51,24 +52,21 @@ class TemplateLoader:
             if not data_dict:
                 raise FileNotFoundError(f"MongoDB没有找到id为 {object_id} 的数据。")
             return data_dict
-        except FileNotFoundError as e:
-            # 文件未找到的特殊处理
-            raise e
         except Exception as e:
             # 其他异常的处理，增加上下文信息
             raise RuntimeError(f"加载MongoDB数据时发生异常，db_name={db_name}, object_id={object_id}。") from e
 
+    # 调用工具管理器加载工具模板
     @staticmethod
     def load_tools_template(tool_id):
-        pass
-
+        return tool_manager.get_metadata(tool_id)
 
     # 读取提示模板函数
     @staticmethod
     def load_template(class_name, template_id):
         # 如果是工具类直接返回引擎内模板
         if class_name == 'tool':
-            return load_tools_template(template_id)
+            return TemplateLoader.load_tools_template(template_id)
 
         # 如果是任务、流程、操作或AI生成类则根据配置文件加载模板
         try:
@@ -83,15 +81,7 @@ class TemplateLoader:
             else:
                 # 如果加载方法配置无效，抛出异常
                 raise ValueError(f"无效的模版加载类型: {TEMPLATE_LOAD_METHOD}，请检查配置文件 prompts->default_source 项。")
-        
-        except FileNotFoundError:
-            # 如果模板未找到，重新抛出以供外部调用处理
-            raise
-        
-        except ValueError:
-            # 抛出配置错误的异常
-            raise
-        
+                
         except Exception as e:
             # 抛出其他未预见的异常，保留原始异常上下文
-            raise RuntimeError(f"加载模板时发生未知错误，class_name={class_name}, template_id={template_id}。") from e
+            raise RuntimeError(f"加载模板时发生错误，class_name={class_name}, template_id={template_id}。") from e

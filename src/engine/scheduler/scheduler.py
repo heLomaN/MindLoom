@@ -17,6 +17,9 @@ class Scheduler(Base):
         'tool': Tool
     }
 
+    # 动态存储参数的字典
+    parameters = {}
+
     def __init__(self, id, secret):
         super().__init__(id, secret)
 
@@ -124,8 +127,32 @@ class Scheduler(Base):
         # 返回经过验证的模板
         return validated_template
 
+    # 从传入的inputs中给参数字典赋值
+    def set_parameters_by_inputs(self, inputs):
+        # 如果提示模板规定输入变量是空值，不需要赋值
+        if self.template["inputs"] == None:
+            return
+        # 根据模板规定需要输入，在类内存空间添加相应变量
+        for template_input in self.template["inputs"]:
+            param_name = template_input["name"]
+            self.parameters[param_name] = inputs[param_name]
+
+    # 从参数字典获取提示模板规定的outputs
+    def get_outputs_by_parameters(self):
+        # 如果提示模板规定的输出是空，直接返回空
+        if self.template["outputs"] == None:
+            return None
+        # 如果提示模板规定的输出不是空，构造返回字典
+        outputs = {}
+        for template_output in self.template["outputs"]:
+            param_name = template_output["name"]
+            if param_name not in self.parameters:
+                raise self.ValidationError(f"缺少输出参数: {param_name}。")
+            outputs[param_name] = self.parameters[param_name]
+        return outputs
+
     # 执行一次嵌套调用
-    def call_execute(self, call_dict):
+    def _call_execute(self, call_dict):
         # 根据class字段名，获取类定义
         call_class = self.EXECUTION_CLASS_MAPPING[call_dict['class']]
         # 直接新实例化一个对应类的对象！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
@@ -171,5 +198,5 @@ class Scheduler(Base):
                 self.parameters[output['name']] = outputs[param_name]
 
     @abstractmethod
-    def run(self, inputs):
+    def _execute(self, inputs):
         return {}

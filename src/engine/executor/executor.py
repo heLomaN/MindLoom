@@ -7,6 +7,5 @@ class Executor(Base):
     def __init__(self, id, secret):
         super().__init__(id, secret)
 
-    def run(self, inputs):
+    def _execute(self, inputs):
         return {}
-        

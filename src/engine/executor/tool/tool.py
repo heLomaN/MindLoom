@@ -2,15 +2,15 @@
 
 from config import root_path
 from engine.executor.executor import Executor
+from engine.executor.tool.tool_manager import tool_manager as tm
 
 class Tool(Executor):
     def __init__(self, id, secret):
-        
-        validate_template(cls,template)
         super().__init__(id, secret)
-
-    def run(self, inputs):
-        """ 执行流程 """
-        return {}
-
-
+    
+    # 执行流程
+    def _execute(self, inputs):
+        tool_class = tm.load_tool('calculator.add')
+        instant = tool_class()
+        outputs = instant.run(inputs)
+        return outputs
