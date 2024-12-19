@@ -43,12 +43,14 @@
         {
             "name": "start",
             "description": "调用天气API需要的参数，代表起始时间，默认值是0，表示今天。-1表示昨天",
-            "type": "number"
+            "type": "number",
+            "default":0
         },
         {
             "name": "days",
             "description": "调用天气API需要的参数，代表需要获取天气的天数，默认值1只获取1天。",
-            "type": "number"
+            "type": "number",
+            "default":3
         }
     ],
     "template": {

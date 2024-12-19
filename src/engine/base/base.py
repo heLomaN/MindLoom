@@ -176,6 +176,15 @@ class Base:
             errors.append(f"'{param_name}' 的 'type' 错误：")
             errors.extend(e.errors)
 
+        try:
+            if "default" in item and "type" in item:
+                item_type = item.get("type","string")
+                validated_item["default"] = cls.validate_default(item["default"],item_type)
+        except cls.TemplateError as e:
+            param_name = validated_item.get("name", "<unknown>")
+            errors.append(f"'{param_name}' 的 'default' 错误：")
+            errors.extend(e.errors)
+
         if errors:
             raise cls.TemplateError(errors)
 
@@ -189,6 +198,30 @@ class Base:
         if errors:
             raise Base.TemplateError(errors)
         return type_name
+
+    @staticmethod
+    def validate_default(default,type_name):
+        errors = []
+        if type_name == 'string' and not isinstance(default, (int, float)):
+            errors.append("'default' 必须是 string 类型。")
+            raise Base.TemplateError(errors)
+        elif type_name == 'number' and not isinstance(default, (int, float)):
+            errors.append("'default' 必须是 number 类型。")
+            raise Base.TemplateError(errors)
+        elif type_name == 'bool' and not isinstance(default, bool):
+            errors.append("'default' 必须是 bool 类型。")
+            raise Base.TemplateError(errors)
+        elif type_name == 'array' and not isinstance(default, list):
+            errors.append("'default' 必须是 array 类型。")
+            raise Base.TemplateError(errors)
+        elif type_name == 'object' and not isinstance(default, dict):
+            errors.append("'default' 必须是 object 类型。")
+            raise Base.TemplateError(errors)
+        elif type_name == 'vector':
+            if not (isinstance(default, (list, tuple)) and all(isinstance(x, (int, float)) for x in value)):
+                errors.append("'default' 必须是 vector 类型。")
+                raise Base.TemplateError(errors)
+        return default
 
 ############## 参数校验相关逻辑 ##############
 

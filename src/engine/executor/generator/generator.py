@@ -115,6 +115,7 @@ class Generator(Executor):
         # 返回经过验证的 template 字段
         return validated_template_dict
 
+    # 校验 `llm` 字段
     @staticmethod
     def validate_llm(llm):
         errors = []
@@ -308,4 +309,6 @@ class Generator(Executor):
 ############## 执行相关逻辑 ##############
     # 重写执行方法
     def _execute(self, inputs):
-        return {}
+        # 临时应付一下
+        outputs = {item["name"]: item.get("default", "") for item in self.template["outputs"]}
+        return outputs

@@ -20,9 +20,9 @@ class TestTask(unittest.TestCase):
         # gen_instance = Generator(gen_id, secret)
         try:
             gen_instance = Generator(gen_id, secret)
-            print(gen_instance.get_template())
-            # result = gen_instance.run(inputs)
-            # print(result)
+            # print(gen_instance.get_template())
+            result = gen_instance.run(inputs)
+            print(result)
         except Generator.TemplateError as e:
             print("模板验证失败，错误信息如下：")
             for error in e.errors:
