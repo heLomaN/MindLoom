@@ -1,5 +1,5 @@
 {
-    "generator_id": "generate_planning0001",
+    "id": "generate_planning0001",
     "name": "is_weather_need_by_question",
     "description": "用户问题的第一步思考，判断是否出行问题，根据用户的问题决定是否需要调用天气API。",
     "inputs": [
@@ -61,7 +61,6 @@
             "version": "v1",
             "url": "https://gitaigc.com/v1/chat/completions"
         },
-        
         "parse": {
             "mode": "static",
             "placeholder_format": "{{variable}}"

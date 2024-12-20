@@ -25,7 +25,10 @@ class TemplateLoader:
                 raise FileNotFoundError(f"文件夹 {folder_path} 不存在。")
             # 查找匹配的文件
             for filename in os.listdir(folder_path):
-                if filename.startswith(template_id):
+                # 获取文件名字按‘.’拆分
+                name_split = filename.split(".")
+                # 校验模板名字与ID是否一致，是否是json格式文件
+                if len(name_split) == 3 and name_split[0] == template_id and name_split[2] == "json":
                     file_path = os.path.join(folder_path, filename)
                     # 读取文件内json内容
                     with open(file_path, 'r', encoding='utf-8') as file:

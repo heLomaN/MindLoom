@@ -22,7 +22,7 @@ class TestTask(unittest.TestCase):
         # print(tm.export_metadata())
 
     def test_run_case2(self):
-        tool_id = 'calculator.add'
+        tool_id = 'local.local_address'
         secret = None
         inputs = {'addend':1,'augend':2}
         try:

@@ -1,6 +1,5 @@
 # src/engine/base/base.py
 
-from abc import ABC, abstractmethod
 from engine.base.template_loader import TemplateLoader
 
 # 定义基础类
@@ -225,18 +224,6 @@ class Base:
 
 ############## 参数校验相关逻辑 ##############
 
-    # 校验输入参数
-    def validate_inputs(self, inputs):
-        errors = self._validate_param(self.template.get('inputs', []), inputs, "输入")
-        if errors:
-            raise self.ParameterError(errors)
-
-    # 校验输出参数
-    def validate_outputs(self, outputs):
-        errors = self._validate_param(self.template.get('outputs', []), outputs, "输出")
-        if errors:
-            raise self.ParameterError(errors)
-
     # 校验参数的具体类型
     def _validate_type(self, value, expected_type):
         if expected_type == 'string':
@@ -254,34 +241,48 @@ class Base:
         return False
 
     # 通用参数校验方法
-    # :param template_params: 模板中定义的参数列表
-    # :param actual_params: 实际传入的数据
-    # :param param_type: "输入" 或 "输出"，用于生成错误消息
-    def _validate_param(self, template_params, actual_params, param_type="输入"):
+    def _validate_param(self, template_params, actual_params, param_type):
         errors = []
+        validated_params = {}  # 存放校验过后的参数
+        
         for param in template_params:
             name = param['name']
             expected_type = param['type']
-            # 检查参数是否存在
-            if name not in actual_params:
-                errors.append(f"{param_type}参数缺失：{name}")
+            default_value = param.get('default', None)
+            
+            # 检查实际参数中是否有该字段
+            if name in actual_params:
+                value = actual_params[name]
+            elif default_value is not None:
+                value = default_value
+            else:
+                errors.append(f"{param_type}缺少参数: {name}")
                 continue
-            # 检查参数类型
-            if not self._validate_type(actual_params[name], expected_type):
-                actual_type = type(actual_params[name]).__name__
-                errors.append(f"{param_type}参数 '{name}' 类型错误，期望 {expected_type}，实际为 {actual_type}")
-        return errors
+
+            # 校验参数类型
+            if not self._validate_type(value, expected_type):
+                errors.append(f"{param_type}参数类型不匹配: {name} (期望 {expected_type}, 实际 {type(value).__name__})")
+            else:
+                # 参数校验通过，添加到 validated_params
+                validated_params[name] = value
+        
+        if errors:
+            raise self.ParameterError(errors)
+        
+        return validated_params  # 返回校验过后的参数字典
 
 ############## 执行相关逻辑 ##############
 
     # 运行的主体方法
     def run(self, inputs):
-        self.validate_inputs(inputs)
-        outputs = self._execute(inputs)
-        self.validate_outputs(outputs)
-        return outputs
+        # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
+        validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
+        # 执行函数需要子类重载实现，根据输入获取输出
+        outputs = self._execute(validated_inputs)
+        # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
+        validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
+        return validated_outputs
 
     # 子类实现的具体执行逻辑
-    @abstractmethod
-    def _execute(self, inputs):
-        pass
+    def _execute(self,inputs):
+        return {}

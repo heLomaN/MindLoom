@@ -12,19 +12,24 @@ class Process(Scheduler):
         self.EXECUTION_CLASS_MAPPING['process'] = Process
 
     # 校验提示模板是否合法
-    def validate_template(self):
-        super().validate_template()
+    @classmethod
+    def validate_template(cls, template):
+        errors = []  # 用于记录所有校验错误
+        validated_template = {}  # 用于存储验证通过的字段
+
+        # 调用父类的 validate_template 方法，进行基础的模板校验
+        try:
+            validated_template = super().validate_template(template)
+        except cls.TemplateError as base_errors:
+            # 从父类校验中收集错误
+            errors.extend(base_errors.errors)
+
+        if errors:
+            raise cls.TemplateError(errors)
+
+        # 返回经过验证的模板
+        return validated_template
 
     # 执行函数
-    def run(self, inputs):
-        # 校验输入参数是否合法
-        self.validate_inputs(inputs)
-        # 将输入参数设置到类变量列表
-        self.set_parameters_by_inputs(inputs)
-        ###########
-        #需要在这里添加执行流程#
-        self.parameters['ans'] = '哈哈哈哈'
-        ###########
-        # 获取输出参数
-        outputs = self.get_outputs_by_parameters()
-        return outputs
+    def _execute(self, inputs):
+        return {}

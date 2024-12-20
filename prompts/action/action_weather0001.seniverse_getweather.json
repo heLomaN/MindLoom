@@ -1,5 +1,5 @@
 {
-    "action_id":"action_weather0001",
+    "id":"action_weather0001",
     "name" : "seniverse_getweather",
     "description" : "调用知心天气的API。获取指定城市未来最多 15 天每天的白天和夜间预报，以及昨日的历史天气。",
     "inputs": [
@@ -24,6 +24,14 @@
             "name": "weather_result",
             "type": "string",
             "description": "知心天气预报API返回的结果，是json格式的字符串。"
-        },
-    ]
+        }
+    ],
+    "policy": {
+        "blocking": true,
+        "timeout": 10000,
+        "retry": {
+            "enabled": true,
+            "max_attempts": 3
+        }
+    }
 }

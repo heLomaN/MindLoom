@@ -10,7 +10,7 @@ class Tool(Executor):
     
     # 执行流程
     def _execute(self, inputs):
-        tool_class = tm.load_tool('calculator.add')
+        tool_class = tm.load_tool(self.id)
         instant = tool_class()
         outputs = instant.run(inputs)
         return outputs

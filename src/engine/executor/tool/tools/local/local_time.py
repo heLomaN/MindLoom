@@ -1,4 +1,4 @@
-# src/engine/executor/tool/tools/time/local_time.py
+# src/engine/executor/tool/tools/local/local_time.py
 
 from datetime import datetime
 import pytz
@@ -7,14 +7,14 @@ class LocalTime:
     @staticmethod
     def metadata():
         return {
-            "id": "time.local_time",
+            "id": "local.local_time",
             "name": "get_local_time",
             "description": "获取本地时间的字符串，包括日期、时间、星期和时区。",
-            "input": [
-                {"name": "timezone", "type": "str", "description": "时区名称，例如 'Asia/Shanghai'"}
+            "inputs": [
+                {"name": "timezone", "type": "string", "description": "时区名称，例如 'Asia/Shanghai'"}
             ],
-            "output": [
-                {"name": "local_time", "type": "str", "description": "格式化的本地时间字符串"}
+            "outputs": [
+                {"name": "local_time", "type": "string", "description": "格式化的本地时间字符串"}
             ]
         }
 

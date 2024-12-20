@@ -1,7 +1,5 @@
 # src/engine/scheduler/scheduler.py
 
-from abc import ABC, abstractmethod
-
 # 导入配置文件从而确定根路径
 from engine.base.base import Base
 from engine.executor.action.action import Action
@@ -197,6 +195,5 @@ class Scheduler(Base):
                 # 将输出放入类内存变量中
                 self.parameters[output['name']] = outputs[param_name]
 
-    @abstractmethod
-    def _execute(self, inputs):
+    def _execute(self,inputs):
         return {}

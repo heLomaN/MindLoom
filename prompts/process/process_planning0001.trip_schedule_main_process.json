@@ -24,11 +24,11 @@
                 "description": "获取当前位置描述",
                 "call":{
                     "class": "tool",
-                    "id": "tool_local_getcity0001",
+                    "id": "local.local_address",
                     "inputs": null,
                     "outputs": [
                         {
-                            "name": "GNSS_address",
+                            "name": "local_address",
                             "type": "string",
                             "target": "GNSS_address"
                         }
@@ -40,7 +40,7 @@
                 "description": "获取当前的时间信息",
                 "call":{
                     "class": "tool",
-                    "id": "tool_local_gettime0001",
+                    "id": "local.local_time",
                     "inputs": null,
                     "outputs": [
                         {
@@ -105,7 +105,7 @@
                             "type": "number",
                             "target": "days"
                         }
-                    ],
+                    ]
                 }
             },
             {
@@ -162,7 +162,7 @@
                             "type": "string",
                             "target": "answer"
                         }
-                    ],
+                    ]
                 }
             }
         ]
