@@ -21,7 +21,7 @@ class Base:
     # 定义提示模版
     template = {}
 
-    #构造函数加载模板和校验模板
+    # 构造函数加载模板和校验模板
     def __init__(self, id, secret):
         self.id = id
         self.secret = secret
@@ -35,57 +35,74 @@ class Base:
         
         self.template = self.validate_template(template)
 
+############## 执行相关逻辑 ##############
+
+    # 运行的主体方法
+    def run(self, inputs):
+        # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
+        validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
+        # 执行函数需要子类重载实现，根据输入获取输出
+        outputs = self._execute(validated_inputs)
+        # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
+        validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
+        return validated_outputs
+
+    # 子类实现的具体执行逻辑
+    def _execute(self,inputs):
+        return {}
+
 ############## 提示模板相关逻辑 ##############
 
     # 获取提示模板
     def get_template(self):
         return self.template
 
-    # 校验模板是否合法
+    # 校验模板是否合法，需要在后续继承的子类重写，且每个具体的类会增加自己的校验方案，且不需要实例化也能调用
     @classmethod
     def validate_template(cls, template):
         errors = []  # 用于记录所有校验错误
         validated_template = {}  # 用于存储验证通过的字段
 
-        # 首先检查是否是字典
+        # 首先检查是否是字典，不是则直接返回报错
         if not isinstance(template, dict):
             errors.append("模板必须是一个对象。")
             raise cls.TemplateError(errors)
 
-                # 校验每个字段，并收集错误
-        try:
-            if "name" in template:
-                validated_template["name"] = cls.validate_name(template["name"])
-            else:
-                errors.append("模板必须包含 'name' 字段。")
-        except cls.TemplateError as e:
-            errors.extend(e.errors)
+        # 检查模板名字是否存在且是字符串
+        if "name" not in template:
+            errors.append("模板必须包含 'name' 字段。")
+        elif template["name"] is None or not isinstance(template["name"], str):
+            errors.append("'name' 必须是一个字符串。")
+        else:
+            validated_template["name"] = template["name"]
 
-        try:
-            if "description" in template:
-                validated_template["description"] = cls.validate_description(template["description"])
-            else:
-                errors.append("模板必须包含 'description' 字段。")
-        except cls.TemplateError as e:
-            errors.extend(e.errors)
+        # 检查描述是否存在且是字符串
+        if "description" not in template:
+            errors.append("模板必须包含 'description' 字段。")
+        elif template["description"] is None or not isinstance(template["description"], str):
+            errors.append("'description' 必须是一个字符串。")
+        else:
+            validated_template["description"] = template["description"]
 
+        # 检查输入参数是否合法
         try:
-            if "inputs" in template:
-                validated_template["inputs"] = cls.validate_template_param(template["inputs"])
-            else:
+            if "inputs" in template and template["inputs"] != None:
+                validated_template["inputs"] = cls.validate_template_params(template["inputs"])
+            else: 
                 errors.append("模板必须包含 'inputs' 字段。")
         except cls.TemplateError as e:
-            errors.append("'inputs' 字段错误：")
-            errors.extend(e.errors)
+            error_messages = '\n'.join(f'{e}' for e in e.errors)
+            errors.append(f"'inputs' 字段存在错误：{error_messages}")
 
+        # 检查输出参数是否合法
         try:
-            if "outputs" in template:
-                validated_template["outputs"] = cls.validate_template_param(template["outputs"])
+            if "outputs" in template and template["outputs"] != None:
+                validated_template["outputs"] = cls.validate_template_params(template["outputs"])
             else:
                 errors.append("模板必须包含 'outputs' 字段。")
         except cls.TemplateError as e:
-            errors.append("'outputs' 字段错误：")
-            errors.extend(e.errors)
+            error_messages = '\n'.join(str(error) for error in e.errors)
+            errors.append(f"'outputs' 字段存在错误：{error_messages}")
 
         # 如果有任何错误，抛出 TemplateError 异常
         if errors:
@@ -93,136 +110,112 @@ class Base:
 
         return validated_template
 
-    # 校验name字段
-    @staticmethod
-    def validate_name(name):
-        errors = []
-        if not isinstance(name, str):
-            errors.append("'name' 必须是一个字符串。")
-        if errors:
-            raise Base.TemplateError(errors)
-        return name
-
-    # 校验description字段
-    @staticmethod
-    def validate_description(description):
-        errors = []
-        if not isinstance(description, str):
-            errors.append("'description' 必须是一个字符串。")
-        if errors:
-            raise Base.TemplateError(errors)
-        return description
+############## 提示模板校验相关函数 ##############
 
     # 校验参数列表
-    @classmethod
-    def validate_template_param(cls, param):
-        errors = []
-        if param is not None and not isinstance(param, list):
-            errors.append("必须是一个列表或 null。")
-            raise cls.TemplateError(errors)
+    @staticmethod
+    def validate_template_params(params):
+        errors = [] # 用于记录所有校验错误
+        validated_params = [] # 用于存储验证通过的字段
 
-        if isinstance(param, list):
-            validated_items = []
-            for item in param:
-                try:
-                    validated_items.append(cls.validate_param_item(item))
-                except cls.TemplateError as e:
-                    errors.extend(e.errors)
+        # 首先检查是否是字典，不是则直接返回报错
+        if not isinstance(params, list):
+            errors.append("该值必须是一个参数列表。")
+            raise Base.TemplateError(errors)
 
-            if errors:
-                raise cls.TemplateError(errors)
+        # 循环校验每个参数
+        for item in params:
+            try:
+                validated_params.append(Base.validate_template_params_item(item))
+            except Base.TemplateError as e:
+                errors.extend(e.errors)
 
-            return validated_items
-        return []
+        # 如果有任何错误，抛出 TemplateError 异常
+        if errors:
+            raise Base.TemplateError(errors)
+
+        return validated_params
 
     # 校验参数内容
-    @classmethod
-    def validate_param_item(cls, item):
-        errors = []
+    @staticmethod
+    def validate_template_params_item(item):
+        errors = [] # 用于记录所有校验错误
+        validated_item = {} # 用于记录所有校验错误
+
         if not isinstance(item, dict):
-            errors.append("每个元素必须是一个字典。")
-            raise cls.TemplateError(errors)
+            errors.append("参数必须是一个结构对象。")
+            raise Base.TemplateError(errors)
 
-        validated_item = {}
+        # 校验参数名字字段必须存在且是字符串
+        if "name" not in item:
+            errors.append("该参数必须包含 'name' 字段。")
+        elif item["name"] is None or not isinstance(item["name"], str):
+            errors.append("该参数的 'name' 必须是一个字符串。")
+        else:
+            validated_item["name"] = item["name"]
 
-        # 校验每个字段
-        try:
-            if "name" in item:
-                validated_item["name"] = cls.validate_name(item["name"])
-            else:
-                errors.append("参数 'name' 必须存在。")
-        except cls.TemplateError as e:
-            errors.append("参数 'name' 错误：")
-            errors.extend(e.errors)
+        # 保存参数名字，用于打印错误日志
+        param_name = validated_item.get("name", "<unknown>")
 
-        try:
-            if 'description' in item:
-                validated_item["description"] = cls.validate_description(item["description"])
-            else:
-                errors.append("参数 'description' 必须存在。")
-        except cls.TemplateError as e:
-            param_name = validated_item.get("name", "<unknown>")
-            errors.append(f"'{param_name}' 的 'description' 错误：")
-            errors.extend(e.errors)
+        # 校验参数描述字段必须存在且是字符串
+        if 'description' not in item:
+            errors.append(f"'{param_name}' 参数必须包含 'description' 字段。")
+        elif item["description"] is None or not isinstance(item["description"], str):
+            errors.append(f"'{param_name}' 参数的 'description' 必须是一个字符串。")
+        else:
+            validated_item["description"] = item["description"]
 
-        try:
-            if "type" in item:
-                validated_item["type"] = cls.validate_type(item["type"])
-            else:
-                errors.append("参数 'type' 必须存在。")
-        except cls.TemplateError as e:
-            param_name = validated_item.get("name", "<unknown>")
-            errors.append(f"'{param_name}' 的 'type' 错误：")
-            errors.extend(e.errors)
+        # 校验参数的类型字段是否存在且符合字段定义
+        if "type" not in item:
+            errors.append(f"'{param_name}' 参数必须包含 'type' 字段。")
+        elif item["type"] is None or not isinstance(item["type"], str):
+            errors.append(f"'{param_name}' 参数的 'type' 必须是有效的字符串类型。")
+        elif item["type"] not in Base.PARAMETER_TYPE:
+            base_types = ', '.join(f'{t}' for t in Base.PARAMETER_TYPE)
+            errors.append(f"'{param_name}' 参数的 'type' 必须是 {base_types} 的一种。")
+        else:
+            validated_item["type"] = item["type"]
+        
+        # 获取定义的值
+        item_type = validated_item.get("type","string")
 
-        try:
-            if "default" in item and "type" in item:
-                item_type = item.get("type","string")
-                validated_item["default"] = cls.validate_default(item["default"],item_type)
-        except cls.TemplateError as e:
-            param_name = validated_item.get("name", "<unknown>")
-            errors.append(f"'{param_name}' 的 'default' 错误：")
-            errors.extend(e.errors)
+        # 校验缺损值符合参数的类型定义
+        if "default" in item and validated_item["default"] != None:
+            try:
+                validated_item["default"] = Base.validate_value_type(item["default"],item_type)
+            except Base.TemplateError as e:
+                error_messages = '\n'.join(str(error) for error in e.errors)
+                errors.append(f"'{param_name}' 参数的 'default' 错误：{error_messages}")
 
         if errors:
-            raise cls.TemplateError(errors)
+            raise Base.TemplateError(errors)
 
         return validated_item
 
+    # 校验值是否对应相应的类型
     @staticmethod
-    def validate_type(type_name):
+    def validate_value_type(value,type_name):
         errors = []
-        if not isinstance(type_name, str) or type_name not in Base.PARAMETER_TYPE:
-            errors.append("'type' 必须是有效的类型值。")
+        if type_name == 'string' and not isinstance(value, str):
+            errors.append("参数值必须是 string 类型。")
+        elif type_name == 'number' and not isinstance(value, (int, float)):
+            errors.append("参数值必须是 number 类型。")
+        elif type_name == 'bool' and not isinstance(value, bool):
+            errors.append("参数值必须是 bool 类型。")
+        elif type_name == 'array' and not isinstance(value, list):
+            errors.append("参数值必须是 array 类型。")
+        elif type_name == 'object' and not isinstance(value, dict):
+            errors.append("参数值必须是 object 类型。")
+        elif type_name == 'vector':
+            if not (isinstance(value, (list, tuple)) and all(isinstance(x, (int, float)) for x in value)):
+                errors.append("参数值必须是 vector 类型。")
+
         if errors:
             raise Base.TemplateError(errors)
-        return type_name
 
-    @staticmethod
-    def validate_default(default,type_name):
-        errors = []
-        if type_name == 'string' and not isinstance(default, (int, float)):
-            errors.append("'default' 必须是 string 类型。")
-            raise Base.TemplateError(errors)
-        elif type_name == 'number' and not isinstance(default, (int, float)):
-            errors.append("'default' 必须是 number 类型。")
-            raise Base.TemplateError(errors)
-        elif type_name == 'bool' and not isinstance(default, bool):
-            errors.append("'default' 必须是 bool 类型。")
-            raise Base.TemplateError(errors)
-        elif type_name == 'array' and not isinstance(default, list):
-            errors.append("'default' 必须是 array 类型。")
-            raise Base.TemplateError(errors)
-        elif type_name == 'object' and not isinstance(default, dict):
-            errors.append("'default' 必须是 object 类型。")
-            raise Base.TemplateError(errors)
-        elif type_name == 'vector':
-            if not (isinstance(default, (list, tuple)) and all(isinstance(x, (int, float)) for x in value)):
-                errors.append("'default' 必须是 vector 类型。")
-                raise Base.TemplateError(errors)
-        return default
+        return value
 
-############## 参数校验相关逻辑 ##############
+############## 运行时参数校验相关逻辑 ##############
 
     # 校验参数的具体类型
     def _validate_type(self, value, expected_type):
@@ -270,19 +263,3 @@ class Base:
             raise self.ParameterError(errors)
         
         return validated_params  # 返回校验过后的参数字典
-
-############## 执行相关逻辑 ##############
-
-    # 运行的主体方法
-    def run(self, inputs):
-        # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
-        validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
-        # 执行函数需要子类重载实现，根据输入获取输出
-        outputs = self._execute(validated_inputs)
-        # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
-        validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
-        return validated_outputs
-
-    # 子类实现的具体执行逻辑
-    def _execute(self,inputs):
-        return {}

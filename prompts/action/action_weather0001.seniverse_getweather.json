@@ -25,13 +25,5 @@
             "type": "string",
             "description": "知心天气预报API返回的结果，是json格式的字符串。"
         }
-    ],
-    "policy": {
-        "blocking": true,
-        "timeout": 10000,
-        "retry": {
-            "enabled": true,
-            "max_attempts": 3
-        }
-    }
+    ]
 }
