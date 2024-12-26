@@ -15,19 +15,22 @@ class Scheduler(Base):
         'tool': Tool
     }
 
-    # 动态存储参数的字典
+    # 类变量空间动态存储参数的字典
     parameters = {}
 
     # 构造函数直接调用父类的构造函数加载模板和校验模板
-    def __init__(self, id, secret):
-        super().__init__(id, secret)
+    def __init__(self, template_id, secret=None, task_id=None, parent_run_id=None):
+        super().__init__(template_id, secret, task_id, parent_run_id)
 
 ############## 运行时相关逻辑 ##############
 
     # 重写执行方法，调度器特殊执行逻辑，需要把输入参数放入变量空间，最后输出再从变量空间取出
     def _execute(self,inputs):
+        # 把输入参数设置到类变量空间参数
         self.set_parameters_by_inputs(inputs)
+        # 调度器类执行函数进行实施
         self._process_execute()
+        # 从获取类变量空间参数获取输出参数
         outputs = self.get_outputs_by_parameters()
         return outputs
 
@@ -252,47 +255,81 @@ class Scheduler(Base):
 
 ############## 运行时处理逻辑 ##############
 
-    # 执行一次嵌套调用
+    # 执行一次嵌套call run调用
     def _call_execute(self, call_dict):
         # 根据class字段名，获取类定义
         call_class = self.EXECUTION_CLASS_MAPPING[call_dict['class']]
-        # 直接新实例化一个对应类的对象！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-        call = call_class(call_dict['id'], secret = None)
 
-        # 从类内存变量中获取call需要的输入参数
-        if call_dict['inputs'] == None:
-            inputs = None
-        else:
-            inputs = {}
-            for input in call_dict['inputs']:
-                # 如果value存在，直接赋初始值
-                if 'value' in input:
-                    inputs[input['name']] = input['value']
-                # 如果value不存在，需要从类内存空间获取
-                else:
-                    param_name = input['source']
-                    # 校验参数是否存在
-                    if param_name not in self.parameters:
-                        raise self.ParameterError(f"缺少输入参数: {param_name}。")
-                    # 校验参数类型是否合法
-                    Scheduler.validate_value_type(self.parameters[param_name],input['type'])
-                    # 给需要传入的参数赋值
-                    inputs[input['name']] = self.parameters[param_name]
+        # 根据获取call结构定义从类内存变量空间取出对应参数
+        inputs = self.get_inputs_by_definition(call_dict['inputs'])
 
-        # 执行一次call，获取outputs！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-        outputs = call.run(inputs)
-
-        # 将call调用返回的outputs放置到类内存空间的变量中
-        if call_dict['outputs'] == None:
+        # 执行call调用并获取对应的错误代码
+        try:
+            # 实例化一个对应类的对象
+            call = call_class(call_dict['id'], task_id = self.task_id, parent_run_id = self.run_id)
+            # 嵌套执行该类的run函数
+            run_id,outputs = call.run(inputs)
+        except Scheduler.TemplateError as e:
+            print("模板验证失败，错误信息如下：")
+            for error in e.errors:
+                print(f"- {error}")
+        except Scheduler.ParameterError as e:
+            print("参数校验失败，错误信息如下：")
+            for error in e.errors:
+                print(f"- {error}")
+        except RuntimeError as e:
             pass
-        else:
-            for output in call_dict['outputs']:
-                param_name = output['name']
-                # 校验需要的输出参数是否存在
-                if param_name not in outputs:
-                    raise self.ParameterError(f"缺少输出参数: {param_name}。")
-                # 校验参数类型是否合法
-                Scheduler.validate_value_type(outputs[param_name],output['type'])
-                # 将输出放入类内存变量中
-                self.parameters[output['target']] = outputs[param_name]
+
+        
+
+        # 将输出参数设置到类内存变量空间
+        self.set_outputs_by_target(outputs,call_dict['outputs'])
+
+    # 将参数放置到类变量空间动态存储参数的字典
+    def set_outputs_by_target(self, outputs, outputs_definition):
+        parameters = {}
+        # 循环赋值返回的参数
+        for def_output in outputs_definition:
+            output_name = def_output["name"]
+            output_type = def_output["type"]
+            output_target = def_output["target"]
+            # 校验板定义的目标参数存在且类型合法
+            if output_name not in outputs:
+                raise RuntimeError(f"未返回期待的内存空间参数 {output_name}。")
+            elif self._validate_type(outputs[output_name], output_type) == False:
+                raise RuntimeError(f"返回的变量 {output_name} 类型与 {output_target} 期待类型不符，不是预期的 {input_type} 类型。")
+            else:
+                parameters[output_target] = outputs[output_name]
+        
+        # 当没有错误后统一设置到内存空间参数
+        for parameter in parameters:
+            self.parameters[parameter] = parameters[parameter]
+
+    # 从类变量空间动态存储参数的字典，根据定义模板获取参数 
+    def get_inputs_by_definition(self, inputs_definition):
+        inputs = {}
+        # 循环填充定义需要的输入参数
+        for def_input in inputs_definition:
+            # 获取对应的值内容
+            value = None
+            if "value" in def_input:
+                # 如果模板定义存在value，则直接赋值
+                value = def_input["value"]
+            elif "source" in def_input:
+                # 如果模板定义存在source，则在类内存空间参数字典中寻找并赋值
+                input_source = def_input["source"]
+                if input_source not in self.parameters:
+                    raise RuntimeError(f"变量空间缺少参数 {input_source}。")
+                else:
+                    value = self.parameters[input_source]
+
+            # 校验值的类型是否和模板定义相符，通过后放入返回变量
+            input_name = def_input["name"]
+            input_type = def_input['type']
+            if self._validate_type(value, input_type):
+                inputs[input_name] = value
+            else:
+                raise RuntimeError(f"被传入的变量 {input_name} 类型值不是预期的 {input_type} 类型。")
+        # 返回获取的输入参数
+        return inputs
 

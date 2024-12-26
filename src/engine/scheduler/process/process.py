@@ -6,8 +6,8 @@ from config import root_path
 from engine.scheduler.scheduler import Scheduler
 
 class Process(Scheduler):
-    def __init__(self, id, secret):
-        super().__init__(id, secret)
+    def __init__(self, template_id, secret=None, task_id=None, parent_run_id=None):
+        super().__init__(template_id, secret, task_id, parent_run_id)
         # 添加Process类到类映射中
         self.EXECUTION_CLASS_MAPPING['process'] = Process
 

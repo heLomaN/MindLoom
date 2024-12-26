@@ -16,14 +16,14 @@ class Generator(Executor):
     EXTRACT_MODE_TYPE = ['regex', 'json', 'xml', 'yaml']
 
     # 构造函数直接调用父类的构造函数加载模板和校验模板
-    def __init__(self, id, secret):
-        super().__init__(id, secret)
+    def __init__(self, template_id, secret=None, task_id=None, parent_run_id=None):
+        super().__init__(template_id, secret, task_id, parent_run_id)
 
 ############## 执行相关逻辑 ##############
 
     # 重写执行方法
     def _execute(self, inputs):
-        if self.id == "generate_planning0001":
+        if self.template_id == "generate_planning0001":
             outputs = {
                 "thinking": "用户在北京出差，期望下班后去逛后海，因此这是一个活动出行类的问题。根据用户提供的时间（每天下班时间是18:00），需要为其推荐合适的活动行程规划。后海是适合晚上游玩的地方，可以考虑天气因素来判断最合适的出行时间。所以我需要查看接下来几天的天气情况，看哪天适合去。",
                 "is_weather_api": "是",
@@ -33,7 +33,7 @@ class Generator(Executor):
                 "days": 3,
             }
             return outputs
-        elif self.id == "generate_planning0002":
+        elif self.template_id == "generate_planning0002":
             outputs = {
                 "answer": "嘿，出差之余还想着后海浪一圈，懂享受！看天气，后天晴朗又不冷，最适合！下班后直接奔后海，7点到，先沿湖溜达拍夜景，再找家湖边小酒吧，热饮配夜风，倍儿惬意！带条围巾，别玩太晚，工作浪两不误！"
             }

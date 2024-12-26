@@ -44,7 +44,7 @@ class TemplateLoader:
         
         except Exception as e:
             # 捕获其他异常并提供上下文信息
-            raise RuntimeError(f"读取文件夹 {folder_path} 中的文件时发生异常，folder_name={folder_name}, id={id}。") from e
+            raise RuntimeError(f"读取文件夹 {folder_path} 中的文件时发生异常，folder_name={folder_name}, id={template_id}。") from e
 
     # 从mongoDB读取提示模板方法
     @staticmethod

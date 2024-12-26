@@ -8,15 +8,15 @@ class Task(Scheduler):
     # 定义主流程调用
     main_call = {}
 
-    def __init__(self, id, secret):
-        super().__init__(id, secret)
+    def __init__(self, template_id, secret=None, task_id=None, parent_run_id=None):
+        super().__init__(template_id, secret, task_id, parent_run_id)
         # 添加Process类到类映射中
         self.EXECUTION_CLASS_MAPPING['process'] = Process
         
 ############## 运行时相关逻辑 ##############
 
     # 重写执行函数，Task直接调用call即可
-    def _execute(self, inputs):
+    def _process_execute(self):
         # 设置主流程
         main_call = self.template["execution"]["call"]
         self._call_execute(main_call)

@@ -1,6 +1,9 @@
 # src/engine/base/base.py
 
+import uuid
+
 from engine.base.template_loader import TemplateLoader
+from engine.base.runtime_log import RuntimeLog
 
 # 定义基础类
 class Base:
@@ -19,33 +22,60 @@ class Base:
     PARAMETER_TYPE = ['string','number','bool','array','object','vector']
     
     # 定义提示模版
+    template_id = None
     template = {}
 
+    # 定义运行时id参数
+    task_id = None
+    parent_run_id = None
+    run_id = None
+
+    # 定义运行时log对象
+    runtime_log = None
+
     # 构造函数加载模板和校验模板
-    def __init__(self, id, secret):
-        self.id = id
+    def __init__(self, template_id, secret=None, task_id=None, parent_run_id=None):
+        self.template_id = template_id
         self.secret = secret
+        self.task_id = task_id
+        self.parent_run_id = parent_run_id
 
         # 获取当前类名作为class_name
         class_name = self.__class__.__name__
         # 转换成小写，因为文件名和mongoDB默认用小写标记类
-        class_name = class_name.lower()
+        self.class_name = class_name.lower()
 
-        template = TemplateLoader.load_template(class_name,id)
+        template = TemplateLoader.load_template(self.class_name, self.template_id)
         
         self.template = self.validate_template(template)
 
 ############## 执行相关逻辑 ##############
 
     # 运行的主体方法
-    def run(self, inputs):
-        # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
-        validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
-        # 执行函数需要子类重载实现，根据输入获取输出
-        outputs = self._execute(validated_inputs)
-        # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
-        validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
-        return validated_outputs
+    def run(self, inputs, secret=None):
+        # 设置运行时id
+        self.run_id = str(uuid.uuid4())
+        if self.class_name == "task":
+            self.task_id = self.run_id
+        # 开始记录运行时日志
+        self.runtime_log = RuntimeLog(self.template_id, self.class_name, self.run_id, self.task_id, self.parent_run_id, inputs)
+
+        # 开始执行
+        try:
+            # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
+            validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
+            # 执行函数需要子类重载实现，根据输入获取输出
+            outputs = self._execute(validated_inputs)
+            # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
+            validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
+        except Exception as exc:
+            self.runtime_log.mark_as_failed(exc)
+            # 继续向上抛出异常错误
+            raise exc
+        # 成功运行完成，打印log
+        self.runtime_log.mark_as_complete(validated_outputs)
+        # 返回输出参数
+        return self.run_id,validated_outputs
 
     # 子类实现的具体执行逻辑
     def _execute(self,inputs):
@@ -233,7 +263,7 @@ class Base:
             return isinstance(value, (list, tuple)) and all(isinstance(x, (int, float)) for x in value)
         return False
 
-    # 通用参数校验方法
+    # 通用参数校验方法，保证是模板定义的参数，不多不少，类型准确
     def _validate_param(self, template_params, actual_params, param_type):
         errors = []
         validated_params = {}  # 存放校验过后的参数
