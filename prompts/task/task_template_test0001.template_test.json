@@ -20,6 +20,10 @@
         "call":{
             "id": "local.local_time",
             "class":"tool",
+            "error_handling": {
+                "strategy": "retry",
+                "max_retries": 3
+            },
             "inputs": [{
                 "name": "timezone",
                 "type": "string",

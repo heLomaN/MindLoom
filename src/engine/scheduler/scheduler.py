@@ -109,6 +109,14 @@ class Scheduler(Base):
         else:
             validated_call["id"] = call_dict["id"]
 
+        # 检查 "error_handling" 值是如果存在，校验是否合法
+        if "error_handling" in call_dict:
+            try:
+                validated_call["error_handling"] = Scheduler.validate_template_call_error_handling(call_dict["error_handling"])
+            except Scheduler.TemplateError as e:
+                error_messages = '\n'.join(f'{e}' for e in e.errors)
+                errors.append(f"'call' -> 'error_handling' 字段存在错误：{error_messages}")
+
         # 检查call输入参数是否合法
         try:
             if "inputs" in call_dict and call_dict["inputs"] != None:
@@ -135,6 +143,44 @@ class Scheduler(Base):
 
         # 返回经过验证的模板
         return validated_call 
+
+    # 校验 error_handling 字段的合法性
+    @staticmethod
+    def validate_template_call_error_handling(error_handling):
+        errors = [] # 用于记录所有校验错误
+        validated_error_handling = {} # 用于存储验证通过的字段
+
+        if not isinstance(item, dict):
+            errors.append("错误处理字段必须是一个结构对象。")
+            raise Scheduler.TemplateError(errors)
+
+        # 校验 strategy 字段必须是特定的字符串
+        if "strategy" not in error_handling:
+            errors.append("错误处理字段必须包含strategy")
+        elif not isinstance(error_handling["strategy"],str):
+            errors.append(" 'strategy' 必须是字符串")
+        elif error_handling["strategy"] not in ["stop", "continue", "retry"]:
+            errors.append(" 'strategy' 必须是'stop', 'continue', 'retry' 中的一个。")
+        else:
+            validated_error_handling.append(error_handling["strategy"])
+
+        # 如果策略是重试，需要存在max_retries且合法
+        if not errors and "retry" == error_handling["strategy"]:
+            if "max_retries" not in error_handling:
+                errors.append(" 当错误处置策略是重试，'max_retries' 字段必须存在。")
+            elif not isinstance(error_handling["max_retries"],int):
+                errors.append(" 'max_retries' 必须是整数。")
+            elif error_handling["max_retries"] < 1 or error_handling["max_retries"] > 15:
+                errors.append(" 'max_retries' 必需要在 1 至 15 之间。")
+            else:
+                validated_error_handling.append(error_handling["max_retries"])
+
+        # 如果有任何错误，抛出 TemplateError 异常
+        if errors:
+            raise Scheduler.TemplateError(errors)
+
+        return validated_error_handling
+
 
     # 校验参数列表
     @staticmethod
@@ -257,30 +303,36 @@ class Scheduler(Base):
 
     # 执行一次嵌套call run调用
     def _call_execute(self, call_dict):
+        # 打印相关执行cll记录log
+        self.runtime_log.add_record(f"准备执行一次call调用：{call_dict}")
         # 根据class字段名，获取类定义
         call_class = self.EXECUTION_CLASS_MAPPING[call_dict['class']]
 
         # 根据获取call结构定义从类内存变量空间取出对应参数
         inputs = self.get_inputs_by_definition(call_dict['inputs'])
 
-        # 执行call调用并获取对应的错误代码
+        # 实例化一个对应类的对象
         try:
-            # 实例化一个对应类的对象
             call = call_class(call_dict['id'], task_id = self.task_id, parent_run_id = self.run_id)
-            # 嵌套执行该类的run函数
-            run_id,outputs = call.run(inputs)
         except Scheduler.TemplateError as e:
-            print("模板验证失败，错误信息如下：")
+            error_messages = []
+            error_messages(f"{call_dict['id']} 模板验证失败，错误信息如下：")
             for error in e.errors:
                 print(f"- {error}")
+            "\n".join(messages)
+        except Exception as e:
+            pass
+        
+
+        # 执行call调用并获取对应的错误代码
+        try:
+            run_id,outputs = call.run(inputs)
         except Scheduler.ParameterError as e:
             print("参数校验失败，错误信息如下：")
             for error in e.errors:
                 print(f"- {error}")
         except RuntimeError as e:
             pass
-
-        
 
         # 将输出参数设置到类内存变量空间
         self.set_outputs_by_target(outputs,call_dict['outputs'])
