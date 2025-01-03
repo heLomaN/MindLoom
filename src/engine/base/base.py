@@ -69,14 +69,20 @@ class Base:
         try:
             # 获取合法输入如果没有输入需要模板填充默认值，并校验是否合法，合法继续，不合法报错
             validated_inputs = self._validate_param(self.template["inputs"], inputs, "输入")
+            # 开始运行打赢log记录输入
+            self.runtime_log.add_record(f"当前任务 {self.run_id} 开始执行，实际使用的输入参数：{validated_inputs}")
             # 执行函数需要子类重载实现，根据输入获取输出
             outputs = self._execute(validated_inputs)
+            # 打赢log记录输入
+            self.runtime_log.add_record(f"当前任务 {self.run_id} 执行完毕，运行获得的返回参数：{outputs}")
             # 根据返回的outputs判断是否有没生成的，再填充默认值，并校验是否合法，不合法报错，合法则返回。
             validated_outputs = self._validate_param(self.template["outputs"], outputs, "输出")
         except Exception as exc:
             self.runtime_log.mark_as_failed(exc)
             # 继续向上抛出异常错误
             raise exc
+
+        
         # 成功运行完成，打印log
         self.runtime_log.mark_as_complete(validated_outputs)
         # 返回输出参数

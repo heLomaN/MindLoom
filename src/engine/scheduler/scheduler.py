@@ -340,7 +340,7 @@ class Scheduler(Base):
         call_class_name = call_dict["class"]
         
         # 打印相关执行call记录log
-        self.runtime_log.add_record(f"准备call调用，调用类型： {call_class_name}\n调用ID：{call_template_id}\n调用详情：{call_dict}")
+        self.runtime_log.add_record(f"准备执行调用，调用类型： {call_class_name}\n调用ID：{call_template_id}\n调用详情：{call_dict}")
 
         # 根据class字段名，获取类定义
         call_class = self.EXECUTION_CLASS_MAPPING[call_class_name]
@@ -383,48 +383,48 @@ class Scheduler(Base):
 
             # 尝试执行run函数,如果执行成功，退出循环
             try:
-                self.runtime_log.add_record(f"执行call调用，运行ID：{call_run_id}，传入参数：{inputs}")
+                self.runtime_log.add_record(f"执行调用，运行ID：{call_run_id}，传入参数：{inputs}")
                 outputs = call.run(inputs, call_run_id)
                 break
             # 如果参数校验错误，直接返回错误
             except Scheduler.ParameterError as e:
                 error_messages = [
-                    f"参数校验失败，错误信息如下：",
+                    f"调用参数校验失败，错误信息如下：",
                     "\n".join(e.errors)
                 ]
                 self.runtime_log.add_record("\n".join(error_messages))
-                raise RuntimeError(f"参数错误: {e}")
+                raise RuntimeError(f"调用参数错误: {e}")
             # 运行时错误处置
             except RuntimeError as e:
                 # 打印错误日志
-                self.runtime_log.add_record(f"任务 {call_run_id} 触发运行时错误: {str(e)}")
+                self.runtime_log.add_record(f"执行调用任务 {call_run_id} 触发运行时错误: {str(e)}")
                 
                 # 如果error_handling_retry为True，进行重试
                 if error_handling_retry:
                     attempt += 1
                     if attempt <= error_handling_retry_count:
-                        self.runtime_log.add_record(f"开始重试第{attempt}次，等待{error_handling_retry_interval}秒后执行。")
+                        self.runtime_log.add_record(f"调用开始重试第{attempt}次，等待{error_handling_retry_interval}秒后执行。")
                         time.sleep(error_handling_retry_interval)
                         continue
                     else:
-                        self.runtime_log.add_record(f"重试次数已耗尽，任务执行失败。")
+                        self.runtime_log.add_record(f"调用重试次数已耗尽，调用任务执行失败。")
                 
                 # 根据错误处理策略决定后续行为
                 if error_handling_strategy == "abort":
-                    self.runtime_log.add_record(f"任务 {call_run_id} 运行时错误,执行策略为'abort'，任务终止。")
-                    raise RuntimeError(f"任务失败，错误信息: {str(e)}")
+                    self.runtime_log.add_record(f"执行调用任务 {call_run_id} 运行时错误,执行策略为'abort'，任务终止。")
+                    raise RuntimeError(f"执行调用任务失败，错误信息: {str(e)}")
                 elif error_handling_strategy == "skip":
-                    self.runtime_log.add_record(f"任务 {call_run_id} 执行失败，执行策略为'skip'，跳过此任务，未返回输出。")
+                    self.runtime_log.add_record(f"执行调用任务 {call_run_id} 执行失败，执行策略为'skip'，跳过此任务，未返回输出。")
                     outputs = None
                     break
             # 未知错误直接返回报错
             except Exception as e:
-                self.runtime_log.add_record(f"运行时未知错误: {str(e)}")
-                raise RuntimeError(f"未知错误: {e}")
+                self.runtime_log.add_record(f"执行调用运行时未知错误: {str(e)}")
+                raise RuntimeError(f"执行调用运行未知错误: {e}")
 
         # 将输出参数设置到类内存变量空间
         if outputs is not None:
-            self.runtime_log.add_record(f"任务 {call_run_id} 执行成功，返回 {outputs}。")
+            self.runtime_log.add_record(f"执行调用任务 {call_run_id} 成功，返回 {outputs}。")
             self.set_outputs_by_target(outputs, call_dict['outputs'])
 
     # 将参数放置到类变量空间动态存储参数的字典
