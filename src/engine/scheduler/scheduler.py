@@ -1,5 +1,8 @@
 # src/engine/scheduler/scheduler.py
 
+import time
+import uuid
+
 # 导入配置文件从而确定根路径
 from engine.base.base import Base
 from engine.executor.action.action import Action
@@ -150,30 +153,57 @@ class Scheduler(Base):
         errors = [] # 用于记录所有校验错误
         validated_error_handling = {} # 用于存储验证通过的字段
 
-        if not isinstance(item, dict):
+        if not isinstance(error_handling, dict):
             errors.append("错误处理字段必须是一个结构对象。")
             raise Scheduler.TemplateError(errors)
 
         # 校验 strategy 字段必须是特定的字符串
         if "strategy" not in error_handling:
-            errors.append("错误处理字段必须包含strategy")
+            errors.append("错误处理字段必须包含 'strategy' 字段。")
         elif not isinstance(error_handling["strategy"],str):
             errors.append(" 'strategy' 必须是字符串")
-        elif error_handling["strategy"] not in ["stop", "continue", "retry"]:
-            errors.append(" 'strategy' 必须是'stop', 'continue', 'retry' 中的一个。")
+        elif error_handling["strategy"] not in ["skip", "abort"]:
+            errors.append(" 'strategy' 字段必须是'skip', 'abort'中的一个。")
         else:
-            validated_error_handling.append(error_handling["strategy"])
+            validated_error_handling["strategy"] = error_handling["strategy"]
 
-        # 如果策略是重试，需要存在max_retries且合法
-        if not errors and "retry" == error_handling["strategy"]:
-            if "max_retries" not in error_handling:
-                errors.append(" 当错误处置策略是重试，'max_retries' 字段必须存在。")
-            elif not isinstance(error_handling["max_retries"],int):
-                errors.append(" 'max_retries' 必须是整数。")
-            elif error_handling["max_retries"] < 1 or error_handling["max_retries"] > 15:
-                errors.append(" 'max_retries' 必需要在 1 至 15 之间。")
+        # 校验重试字段
+        if "retry" not in error_handling:
+            errors.append("错误处理字段必须包含 'retry' 字段。")
+        elif not isinstance(error_handling["retry"],dict):
+            errors.append(" 'strategy' -> 'retry' 必须是结构对象。")
+        else:
+            validated_retry = {}
+            # 校验是否重试字段合法性
+            if "enabled" not in error_handling["retry"]:
+                errors.append(" 'strategy' -> 'retry' 字段的 'enabled' 必须存在。")
+            elif not isinstance(error_handling["retry"]["enabled"],bool):
+                errors.append(" 'strategy' -> 'retry' -> 'enabled' 必须是布尔值。")
             else:
-                validated_error_handling.append(error_handling["max_retries"])
+                validated_retry["enabled"] = error_handling["retry"]["enabled"]
+
+            # 校验重试次数字段合法性
+            if "retry_count" not in error_handling["retry"]:
+                validated_retry["retry_count"] = 1
+            elif not isinstance(error_handling["retry"]["retry_count"],int):
+                errors.append(" 'strategy' -> 'retry' -> 'retry_count' 必须是整数。")
+            elif error_handling["retry"]["retry_count"] < 1 or error_handling["retry"]["retry_count"] > 15:
+                errors.append(" 'strategy' -> 'retry' -> 'retry_count' 的值必需要在 1 至 15 之间。")
+            else:
+                validated_retry["retry_count"] = error_handling["retry"]["retry_count"]
+
+            # 校验重试等待秒数字段合法性
+            if "interval" not in error_handling["retry"]:
+                validated_retry["interval"] = 1
+            elif not isinstance(error_handling["retry"]["interval"],int):
+                errors.append(" 'strategy' -> 'retry' -> 'interval' 必须是整数。")
+            elif error_handling["retry"]["interval"] < 0 or error_handling["retry"]["interval"] > 1000:
+                errors.append(" 'strategy' -> 'retry' -> 'interval' 的值必需要在 0 至 1000 之间。")
+            else:
+                validated_retry["interval"] = error_handling["retry"]["interval"]
+            
+            # 填充retry结构体
+            validated_error_handling["retry"] = validated_retry
 
         # 如果有任何错误，抛出 TemplateError 异常
         if errors:
@@ -303,39 +333,99 @@ class Scheduler(Base):
 
     # 执行一次嵌套call run调用
     def _call_execute(self, call_dict):
-        # 打印相关执行cll记录log
-        self.runtime_log.add_record(f"准备执行一次call调用：{call_dict}")
-        # 根据class字段名，获取类定义
-        call_class = self.EXECUTION_CLASS_MAPPING[call_dict['class']]
+        # 获取调用模板ID
+        call_template_id = call_dict['id']
 
-        # 根据获取call结构定义从类内存变量空间取出对应参数
-        inputs = self.get_inputs_by_definition(call_dict['inputs'])
-
-        # 实例化一个对应类的对象
-        try:
-            call = call_class(call_dict['id'], task_id = self.task_id, parent_run_id = self.run_id)
-        except Scheduler.TemplateError as e:
-            error_messages = []
-            error_messages(f"{call_dict['id']} 模板验证失败，错误信息如下：")
-            for error in e.errors:
-                print(f"- {error}")
-            "\n".join(messages)
-        except Exception as e:
-            pass
+        # 获取调用类型
+        call_class_name = call_dict["class"]
         
+        # 打印相关执行call记录log
+        self.runtime_log.add_record(f"准备call调用，调用类型： {call_class_name}\n调用ID：{call_template_id}\n调用详情：{call_dict}")
 
-        # 执行call调用并获取对应的错误代码
+        # 根据class字段名，获取类定义
+        call_class = self.EXECUTION_CLASS_MAPPING[call_class_name]
+
+        # 实例化一个对应类的对象，如果模板错误则终止
         try:
-            run_id,outputs = call.run(inputs)
-        except Scheduler.ParameterError as e:
-            print("参数校验失败，错误信息如下：")
-            for error in e.errors:
-                print(f"- {error}")
-        except RuntimeError as e:
-            pass
+            call = call_class(call_template_id, task_id=self.task_id, parent_run_id=self.run_id)
+        except Scheduler.TemplateError as e:
+            error_messages = [
+                f"模版{call_dict['id']} 模板验证失败，错误信息如下：",
+                "\n".join(e.errors)
+            ]
+            self.runtime_log.add_record("\n".join(error_messages))
+            raise RuntimeError(f"模板 {call_template_id} 格式校验错误: {e}")
+        except Exception as e:
+            self.runtime_log.add_record(f"模板 {call_template_id} 运行时错误: {str(e)}")
+            raise RuntimeError(f"模板未知错误: {e}")
+
+        # 获取错误处理策略，如果不存在则填默认值abort，终止
+        error_handling_strategy = call_dict.get("error_handling", {}).get("strategy","abort")
+        # 获取错误处理是否重试，如果不存在则填默认值false，不重试
+        error_handling_retry = call_dict.get("error_handling", {}).get("retry", {}).get("enabled",False)
+        # 获取错误处理重试次数，如果不存在则填默认值1次
+        if error_handling_retry:
+            error_handling_retry_count = call_dict.get("error_handling", {}).get("retry", {}).get("retry_count",1)
+        else:
+            error_handling_retry_count = 0
+        # 获取错误处理重试等待时间，如果不存在则填默认值1秒
+        error_handling_retry_interval = call_dict.get("error_handling", {}).get("retry", {}).get("interval",1)
+        
+        # 执行call调用
+        attempt = 0
+        outputs = None
+        while attempt <= error_handling_retry_count:
+            # 生成调用的运行时ID
+            call_run_id = str(uuid.uuid4())
+
+            # 根据获取call结构定义从类内存变量空间取出对应参数
+            inputs = self.get_inputs_by_definition(call_dict["inputs"])
+
+            # 尝试执行run函数,如果执行成功，退出循环
+            try:
+                self.runtime_log.add_record(f"执行call调用，运行ID：{call_run_id}，传入参数：{inputs}")
+                outputs = call.run(inputs, call_run_id)
+                break
+            # 如果参数校验错误，直接返回错误
+            except Scheduler.ParameterError as e:
+                error_messages = [
+                    f"参数校验失败，错误信息如下：",
+                    "\n".join(e.errors)
+                ]
+                self.runtime_log.add_record("\n".join(error_messages))
+                raise RuntimeError(f"参数错误: {e}")
+            # 运行时错误处置
+            except RuntimeError as e:
+                # 打印错误日志
+                self.runtime_log.add_record(f"任务 {call_run_id} 触发运行时错误: {str(e)}")
+                
+                # 如果error_handling_retry为True，进行重试
+                if error_handling_retry:
+                    attempt += 1
+                    if attempt <= error_handling_retry_count:
+                        self.runtime_log.add_record(f"开始重试第{attempt}次，等待{error_handling_retry_interval}秒后执行。")
+                        time.sleep(error_handling_retry_interval)
+                        continue
+                    else:
+                        self.runtime_log.add_record(f"重试次数已耗尽，任务执行失败。")
+                
+                # 根据错误处理策略决定后续行为
+                if error_handling_strategy == "abort":
+                    self.runtime_log.add_record(f"任务 {call_run_id} 运行时错误,执行策略为'abort'，任务终止。")
+                    raise RuntimeError(f"任务失败，错误信息: {str(e)}")
+                elif error_handling_strategy == "skip":
+                    self.runtime_log.add_record(f"任务 {call_run_id} 执行失败，执行策略为'skip'，跳过此任务，未返回输出。")
+                    outputs = None
+                    break
+            # 未知错误直接返回报错
+            except Exception as e:
+                self.runtime_log.add_record(f"运行时未知错误: {str(e)}")
+                raise RuntimeError(f"未知错误: {e}")
 
         # 将输出参数设置到类内存变量空间
-        self.set_outputs_by_target(outputs,call_dict['outputs'])
+        if outputs is not None:
+            self.runtime_log.add_record(f"任务 {call_run_id} 执行成功，返回 {outputs}。")
+            self.set_outputs_by_target(outputs, call_dict['outputs'])
 
     # 将参数放置到类变量空间动态存储参数的字典
     def set_outputs_by_target(self, outputs, outputs_definition):

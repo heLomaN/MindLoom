@@ -52,9 +52,14 @@ class Base:
 ############## 执行相关逻辑 ##############
 
     # 运行的主体方法
-    def run(self, inputs, secret=None):
+    def run(self, inputs, run_id=None, secret=None):
         # 设置运行时id
-        self.run_id = str(uuid.uuid4())
+        if run_id:
+            self.run_id = run_id
+        # 如果未传入则自动生成
+        else:
+            self.run_id = str(uuid.uuid4())
+        # 如果是任务类运行时将自己的运行ID设置为任务ID
         if self.class_name == "task":
             self.task_id = self.run_id
         # 开始记录运行时日志
@@ -75,7 +80,7 @@ class Base:
         # 成功运行完成，打印log
         self.runtime_log.mark_as_complete(validated_outputs)
         # 返回输出参数
-        return self.run_id,validated_outputs
+        return validated_outputs
 
     # 子类实现的具体执行逻辑
     def _execute(self,inputs):

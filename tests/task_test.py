@@ -26,7 +26,7 @@ class TestTask(unittest.TestCase):
         }
         try:
             task_instance = Task(t_id)
-            run_id,result = task_instance.run(inputs)
+            result = task_instance.run(inputs)
             print(result)
         except Task.TemplateError as e:
             print("模板验证失败，错误信息如下：")

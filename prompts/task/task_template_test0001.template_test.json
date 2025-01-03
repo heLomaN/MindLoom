@@ -21,8 +21,12 @@
             "id": "local.local_time",
             "class":"tool",
             "error_handling": {
-                "strategy": "retry",
-                "max_retries": 3
+                "strategy": "skip",
+                "retry": {
+                    "enabled": false,
+                    "retry_count": 3,
+                    "interval": 0
+                }
             },
             "inputs": [{
                 "name": "timezone",
