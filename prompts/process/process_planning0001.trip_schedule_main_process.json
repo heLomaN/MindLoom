@@ -25,7 +25,7 @@
                 "call":{
                     "class": "tool",
                     "id": "local.local_address",
-                    "inputs": null,
+                    "inputs": [],
                     "outputs": [
                         {
                             "name": "local_address",
@@ -41,7 +41,7 @@
                 "call":{
                     "class": "tool",
                     "id": "local.local_time",
-                    "inputs": null,
+                    "inputs": [],
                     "outputs": [
                         {
                             "name": "local_time_string",
@@ -138,7 +138,7 @@
                         {
                             "name": "answer",
                             "type": "string",
-                            "target": "answer"
+                            "source": "answer"
                         },
                         {
                             "name": "location",

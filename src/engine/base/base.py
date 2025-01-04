@@ -81,7 +81,6 @@ class Base:
             self.runtime_log.mark_as_failed(exc)
             # 继续向上抛出异常错误
             raise exc
-
         
         # 成功运行完成，打印log
         self.runtime_log.mark_as_complete(validated_outputs)
@@ -221,7 +220,7 @@ class Base:
         item_type = validated_item.get("type","string")
 
         # 校验缺损值符合参数的类型定义
-        if "default" in item and validated_item["default"] != None:
+        if "default" in item and item["default"] != None:
             try:
                 validated_item["default"] = Base.validate_value_type(item["default"],item_type)
             except Base.TemplateError as e:

@@ -100,7 +100,8 @@ class Scheduler(Base):
         elif call_dict["class"] is None or not isinstance(call_dict["class"], str):
             errors.append("'call' -> 'class' 必须是有效的字符串类型。")
         elif call_dict["class"] not in Scheduler.EXECUTION_CLASS_MAPPING:
-            errors.append("'call' -> 'class' 必须是 action，generator，process 或者 tool。")
+            execution_class = ', '.join(f'{t}' for t in Scheduler.EXECUTION_CLASS_MAPPING)
+            errors.append(f"'call' -> 'class' 必须是 {execution_class} 的一种。")
         else:
             validated_call["class"] = call_dict["class"]
 
@@ -325,7 +326,7 @@ class Scheduler(Base):
         for template_output in self.template["outputs"]:
             param_name = template_output["name"]
             if param_name not in self.parameters:
-                raise self.ParameterError(f"缺少输出参数: {param_name}。")
+                raise RuntimeError(f"缺少输出参数: {param_name}。")
             outputs[param_name] = self.parameters[param_name]
         return outputs
 
@@ -343,11 +344,11 @@ class Scheduler(Base):
         self.runtime_log.add_record(f"准备执行调用，调用类型： {call_class_name}\n调用ID：{call_template_id}\n调用详情：{call_dict}")
 
         # 根据class字段名，获取类定义
-        call_class = self.EXECUTION_CLASS_MAPPING[call_class_name]
+        CallClass = self.EXECUTION_CLASS_MAPPING[call_class_name]
 
         # 实例化一个对应类的对象，如果模板错误则终止
         try:
-            call = call_class(call_template_id, task_id=self.task_id, parent_run_id=self.run_id)
+            call = CallClass(call_template_id, task_id=self.task_id, parent_run_id=self.run_id)
         except Scheduler.TemplateError as e:
             error_messages = [
                 f"模版{call_dict['id']} 模板验证失败，错误信息如下：",
