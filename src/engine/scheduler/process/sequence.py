@@ -1,6 +1,6 @@
 # src/engine/scheduler/process/sequence.py
 
-from engine.scheduler.process.type_strategy import TypeProcess
+from engine.scheduler.process.type_process import TypeProcess
 
 class Sequence(TypeProcess):
 ############## 运行时相关逻辑 ##############
