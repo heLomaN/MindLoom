@@ -10,7 +10,7 @@ class LocalTime:
             "id": "local.local_address",
             "name": "get_local_address",
             "description": "获取本地的位置描述字符串。",
-            "inputs": None,
+            "inputs": [],
             "outputs": [
                 {"name": "local_address", "type": "string", "description": "格式化的位置描述的字符串"}
             ]
