@@ -21,7 +21,7 @@ class TestTask(unittest.TestCase):
         }
         secret = None
         try:
-            task_instance = Task(t_id, secret)
+            task_instance = Task(str(t_id), secret)
             result = task_instance.run(inputs)
         except Exception as e:
             print(e)

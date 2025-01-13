@@ -1,40 +1,34 @@
-import time
+# src/services/rabbitmq/rabbitmq_producer.py
 
+import sys
+import os
+import time
 import pika
 import json
-import configparser
-
+import threading
 from services.logger.base_logger import BaseLogger
+from config import RABBITMQ_CONFIG
 
 logger = BaseLogger("rabbitmq")
 
-# 从INI文件中读取配置信息
-def _load_config(filename):
-    config = configparser.ConfigParser()
-    config.read(filename)
-    return config
+def load_mq_config_parameters():
+    rabbitmq_config = RABBITMQ_CONFIG
 
+    rabbitmq_username = rabbitmq_config['username']
+    rabbitmq_password = rabbitmq_config['password']
+    rabbitmq_host = rabbitmq_config['host']
+    rabbitmq_port = int(rabbitmq_config['port'])
 
-def load_mq_config_parameters(config_path="config.ini"):
-    # 从config.ini文件中加载配置信息
-    config = _load_config(config_path)
+    logger.info(f"Connecting to RabbitMQ with username: {rabbitmq_username}, host: {rabbitmq_host}, port: {rabbitmq_port}")
 
-    # 提取RabbitMQ的配置信息
-    rabbitmq_config = config["rabbitmq"]
-    username = rabbitmq_config["username"]
-    password = rabbitmq_config["password"]
-    host = rabbitmq_config["host"]
-    port = int(rabbitmq_config["port"])
-
-    credentials = pika.PlainCredentials(username=username, password=password)
+    credentials = pika.PlainCredentials(username=rabbitmq_username, password=rabbitmq_password)
     parameters = pika.ConnectionParameters(
-        host=host,
-        port=port,
+        host=rabbitmq_host,
+        port=rabbitmq_port,
         credentials=credentials
     )
 
     return parameters
-
 
 class MQClient:
     def __init__(self, parameters):
@@ -47,17 +41,14 @@ class MQClient:
         if self.connection.is_open:
             self.connection.close()
 
-
 class BlockingMQClient(MQClient):
     def __init__(self, parameters):
         super().__init__(parameters)
         self.process = None
 
-    # 设置处理请求的方法，外部传入
     def set_process(self, process):
         self.process = process
 
-    # 处理从队列中收到的消息
     def process_request(self, ch, method, props, body):
         data_rev = body.decode('utf-8')
         logger.info(f"Recv: {data_rev}")
@@ -65,7 +56,6 @@ class BlockingMQClient(MQClient):
         self.send_response(resp, props.correlation_id)
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
-    # 发送响应到响应队列
     def send_response(self, response, correlation_id):
         self.channel.basic_publish(exchange='',
                                    routing_key='response_queue',
@@ -73,7 +63,6 @@ class BlockingMQClient(MQClient):
                                    body=response)
         logger.info(f"Sent: {response}")
 
-    # 开始监听请求队列，等待并处理请求
     def listen_for_requests(self):
         try:
             self.channel.basic_consume(queue='request_queue',
@@ -85,35 +74,47 @@ class BlockingMQClient(MQClient):
         finally:
             self.connection.close()
 
-
 class NoneBlockingMQClient(BlockingMQClient):
     def __init__(self, parameters):
         super().__init__(parameters)
+        self.lock = threading.Lock()
 
-    # 从指定队列中获取一条消息
     def fetch_one_msg(self, queue_name):
-        method_frame, header_frame, body = self.channel.basic_get(queue=queue_name, auto_ack=True)
-        if method_frame:
-            data_rev = body.decode('utf-8')
-            logger.info(f"Queue has message: {data_rev}")
-            return data_rev
-        else:
-            logger.info("Queue is empty.")
-            return None
+        with self.lock:
+            method_frame, header_frame, body = self.channel.basic_get(queue=queue_name, auto_ack=False)
+            if method_frame:
+                data_rev = body.decode('utf-8')
+                logger.info(f"Queue has message: {data_rev}")
+                return data_rev
+            else:
+                logger.info("Queue is empty.")
+                return None
 
-    # 向指定队列发送一条消息
     def send_one_msg(self, queue_name, message):
-        self.channel.basic_publish(
-            exchange='',
-            routing_key=queue_name,
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # 设置消息持久化
+        with self.lock:
+            self.channel.basic_publish(
+                exchange='',
+                routing_key=queue_name,
+                body=message,
+                properties=pika.BasicProperties(
+                    delivery_mode=2,  # Persistent message
+                )
             )
-        )
-        logger.info(f"Send msg: {message}")
-        return True
+            logger.info(f"Send msg: {message}")
+            return True
 
+    def poll_and_process(self, process_callback, timeout=30):
+        start_time = time.time()
+        while True:
+            with self.lock:
+                response = self.fetch_one_msg('response_queue')
+                if response:
+                    process_callback(response)
+                if time.time() - start_time > timeout:
+                    logger.error("Polling timeout.")
+                    return
+
+            time.sleep(1)
 
 # Main function to control execution
 def blocking_test():
@@ -146,8 +147,3 @@ def non_blocking_test():
     finally:
         client.close()
         logger.info("Connection closed")
-
-
-if __name__ == '__main__':
-    non_blocking_test()
-    blocking_test()
