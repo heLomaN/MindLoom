@@ -11,7 +11,7 @@
         },
         "mongodb_config": {
             "host": "<MONGODB_HOST>",
-            "port": <MONGODB_PORT>,
+            "port": 0,
             "username": "<MONGODB_USERNAME>",
             "password": "<MONGODB_PASSWORD>",
             "db_name": "<MONGODB_DB_NAME>",
