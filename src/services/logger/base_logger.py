@@ -58,10 +58,3 @@ def get_logger(module_name):
     log_file = os.path.join(LOG_PATH, f'{module_name}.log')
     logger = BaseLogger(name=module_name, level=LOG_LEVEL, log_file=log_file)
     return logger.get_logger()
-
-# 使用示例
-rabbitmq_logger = get_logger('rabbitmq')
-mongodb_logger = get_logger('mongodb')
-
-rabbitmq_logger.info("RabbitMQ log initialized.")
-mongodb_logger.info("MongoDB log initialized.")
