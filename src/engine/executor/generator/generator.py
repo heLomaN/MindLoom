@@ -28,7 +28,7 @@ class Generator(Executor):
         # 读取密钥配置
         self.secret = self._load_secret()
         
-        print("inputs: ", inputs)
+        # print("inputs: ", inputs)
         print("template: ", self.template)
 
         # 获取模板配置
@@ -41,7 +41,7 @@ class Generator(Executor):
             placeholder_format = parse_config["placeholder_format"]
             post_body = self._replace_variables(post_body, inputs, placeholder_format)
 
-        print("post_body: ", post_body)
+        # print("post_body: ", post_body)
         # 发送请求到OpenAI API
         import requests
         try:
@@ -57,6 +57,7 @@ class Generator(Executor):
             )
             response.raise_for_status()
             llm_response = response.json()
+            # print("llm_response:", llm_response)
             
             # 使用extract规则从响应中提取所需信息
             extract_config = self.template["template"]["extract"]
@@ -425,11 +426,17 @@ class Generator(Executor):
             content = llm_response.get("choices", [{}])[0].get("message", {}).get("content", "")
             if not content:
                 raise ValueError("LLM响应中没有找到有效内容")
-            
+
+            print("content:", content)
             # 解析XML内容
             # 将内容包装在根元素中，以处理可能的多个顶级元素
             xml_content = f"<root>{content}</root>"
             tree = etree.fromstring(xml_content.encode('utf-8'))
+            
+            # 找到 output 节点
+            output_node = tree.find("./output")
+            if output_node is None:
+                raise ValueError("在响应中没有找到 output 节点")
             
             # 存储提取结果
             outputs = {}
@@ -439,8 +446,8 @@ class Generator(Executor):
                 variable = rule["variable"]
                 xpath = rule["path"]
                 
-                # 使用xpath提取内容
-                elements = tree.xpath(xpath)
+                # 在 output 节点中使用 xpath 提取内容
+                elements = output_node.xpath(xpath)
                 
                 if elements:
                     # 如果找到多个匹配，取第一个
